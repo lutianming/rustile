@@ -3,7 +3,8 @@ use std::mem;
 use x11::xlib;
 use x11::keysym;
 
-use super::config::{ Config, BindSym };
+use super::config::Config;
+use super::handler;
 
 pub struct WindowManager {
     display: *mut xlib::Display,
@@ -80,19 +81,19 @@ impl WindowManager {
                             let status: *mut xlib::XComposeStatus = ptr::null_mut();
                             xlib::XLookupString(&mut event, ptr::null_mut(), 0, &mut sym, status);
 
-                            let b = BindSym {
+                            let b = handler::KeyBind {
                                 key: sym,
                                 mask: event.state,
                             };
                             println!("key {} {}", event.state, sym);
                             match self.config.bindsyms.get(&b) {
                                 Some(v) => {
-                                    println!("{}", v[1]);
-                                    if v[0] == "exec" {
-                                        let (v1, v2) = v.split_at(1);
-                                        let args = v2.iter().map(|x| &x[..]).collect();
-                                        self.config.run_cmd(&args);
-                                    }
+                                    // println!("{}", v[1]);
+                                    // if v[0] == "exec" {
+                                    //     let (v1, v2) = v.split_at(1);
+                                    //     let args = v2.iter().map(|x| &x[..]).collect();
+                                    //     self.config.run_cmd(&args);
+                                    // }
                                 }
                                 None => {
                                     println!("no bind")

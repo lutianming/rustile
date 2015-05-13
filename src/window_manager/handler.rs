@@ -1,5 +1,44 @@
-use std::process::Command;
+extern crate x11;
 
+use std::ffi;
+use std::process::Command;
+use x11::xlib;
+
+#[derive(Hash, Eq, PartialEq, Debug)]
+pub struct KeyBind {
+    pub key: u64,
+    pub mask: u32,
+}
+
+impl KeyBind {
+    pub fn build(mod_key: u32, tokens: &[&str]) -> KeyBind {
+        let mut mask = 0;
+        let mut sym = 0;
+        for key in tokens {
+            match *key {
+                "$mod" => mask = mask | mod_key,
+                "Shift" => mask = mask | xlib::ShiftMask,
+                "Ctrl" => mask = mask | xlib::ControlMask,
+                "mod1" => mask = mask | xlib::Mod1Mask,
+                "mod2" => mask = mask | xlib::Mod2Mask,
+                "mod3" => mask = mask | xlib::Mod3Mask,
+                "mod4" => mask = mask | xlib::Mod4Mask,
+                "mod5" => mask = mask | xlib::Mod5Mask,
+                _ => {
+                    let tmp = ffi::CString::new(*key).unwrap();
+                    unsafe{
+                        sym = xlib::XStringToKeysym(tmp.as_ptr());
+                    }
+                }
+            }
+        }
+
+        KeyBind {
+            mask: mask,
+            key: sym
+        }
+    }
+}
 pub trait Handler {
     fn handle(&mut self);
 }

@@ -10,28 +10,26 @@ use std::process::Command;
 use std::ffi;
 use std::env;
 use x11::xlib;
+use std::boxed::Box;
 
-#[derive(Hash, Eq, PartialEq, Debug)]
-pub struct BindSym {
-    pub key: u64,
-    pub mask: u32,
-}
+use super::handler::{ KeyBind, Handler, ExecHandler };
+
 
 pub struct Config {
     mod_key: u32,
-    pub bindsyms: HashMap<BindSym, Vec<String> >,
+    pub bindsyms: HashMap<KeyBind, Vec<String>>,
 }
 
 #[test]
 fn test_map() {
-    let mut bindsyms: HashMap<BindSym, i32> = HashMap::new();
-    let b = BindSym {
+    let mut bindsyms: HashMap<KeyBind, i32> = HashMap::new();
+    let b = KeyBind {
         key: 0,
         mask: 0
     };
     bindsyms.insert(b, 1);
 
-    let c = BindSym {
+    let c = KeyBind {
         key: 0,
         mask: 0
     };
@@ -96,7 +94,9 @@ impl Config {
                 }
                 "exec" => {
                     println!("{}", "exec");
-                    self.run_cmd(&(args.to_vec()));
+                    let mut handler = ExecHandler::build(args);
+                    handler.handle();
+                    // self.run_cmd(&(args.to_vec()));
                 }
                 "bind" => {
 
@@ -108,48 +108,12 @@ impl Config {
         }
     }
 
-    pub fn run_cmd(&self, args: &Vec<&str>) {
-        let (name, args) = args.split_at(1);
-        let mut cmd = Command::new(name[0]);
-
-        println!("{}", name[0]);
-        for arg in args {
-            println!("{}", arg);
-            cmd.arg(arg);
-        }
-        cmd.spawn();
-    }
-
     fn bind_sym(&mut self, args: &Vec<&str>) {
         let (keyseq, cmd) = args.split_at(1);
         let keys: Vec<&str> = keyseq[0].split("+").collect();
 
-        let mut mask = 0;
-        let mut sym = 0;
-        for key in keys {
-            match key {
-                "$mod" => mask = mask | self.mod_key,
-                "Shift" => mask = mask | xlib::ShiftMask,
-                "Ctrl" => mask = mask | xlib::ControlMask,
-                "mod1" => mask = mask | xlib::Mod1Mask,
-                "mod2" => mask = mask | xlib::Mod2Mask,
-                "mod3" => mask = mask | xlib::Mod3Mask,
-                "mod4" => mask = mask | xlib::Mod4Mask,
-                "mod5" => mask = mask | xlib::Mod5Mask,
-                _ => {
-                    let tmp = ffi::CString::new(key).unwrap();
-                    unsafe{
-                        sym = xlib::XStringToKeysym(tmp.as_ptr());
-                    }
-                }
-            }
-        }
-
-        let bind = BindSym {
-            mask: mask,
-            key: sym
-        };
-        println!("binding {} {}", mask, sym);
+        let bind = KeyBind::build(self.mod_key, &keys);
+        println!("binding {} {}", bind.key, bind.mask);
         let mut args: Vec<String> = Vec::new();
         for c in cmd {
             args.push(c.to_string());
