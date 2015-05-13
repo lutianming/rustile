@@ -1,0 +1,15 @@
+[package]
+name = "rustile"
+version = "0.0.1"
+authors = ["lutianming <lutianming1005@gmail.com>"]
+
+[dependencies]
+libc = "*"
+log = "*"
+env_logger = "*"
+
+[dependencies.x11]
+features = ["xlib"]
+
+[[bin]]
+name = "rustile"
