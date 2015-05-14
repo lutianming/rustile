@@ -9,7 +9,6 @@ use rustile::window_manager::WindowManager;
 fn main() {
     env_logger::init().unwrap();
 
-    info!("rustile");
     let mut wm = WindowManager::new();
     wm.run();
 }

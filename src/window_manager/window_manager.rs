@@ -15,7 +15,6 @@ pub struct WindowManager {
 
 impl WindowManager {
     pub fn new() -> WindowManager {
-        println!("starat window manager");
 	unsafe {
 	    let display = xlib::XOpenDisplay(ptr::null());
             if display == ptr::null_mut() {
@@ -54,7 +53,7 @@ impl WindowManager {
 
                 match t {
                     xlib::CreateNotify => {
-                        println!("create");
+                        debug!("create notify");
                         let event = mem::transmute_copy::<xlib::XEvent, xlib::XCreateWindowEvent>(&e);
 
                         // chance attributes before display
@@ -67,14 +66,13 @@ impl WindowManager {
                         xlib::XMapWindow(self.display, event.window);
                     }
                     xlib::DestroyNotify => {
-                        println!("destroy");
+                        debug!("destroy notify");
                         let event = mem::transmute_copy::<xlib::XEvent, xlib::XDestroyWindowEvent>(&e);
 
                     }
                     xlib::KeyRelease => {
-                        println!("key release");
+                        debug!("key release");
                         let mut event = mem::transmute_copy::<xlib::XEvent, xlib::XKeyEvent>(&e);
-                        println!("{}", event.state);
 
                         if event.state > 0 {
                             let mut sym: xlib::KeySym = 0;
@@ -85,7 +83,7 @@ impl WindowManager {
                                 key: sym,
                                 mask: event.state,
                             };
-                            println!("key {} {}", event.state, sym);
+                            debug!("key {} {}", event.state, sym);
                             match self.config.bindsyms.get_mut(&b) {
                                 Some(handler) => {
                                     handler.handle();

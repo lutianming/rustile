@@ -93,7 +93,6 @@ impl Config {
 
                 }
                 "exec" => {
-                    println!("{}", "exec");
                     let mut handler = ExecHandler::build(args);
                     handler.handle();
                     // self.run_cmd(&(args.to_vec()));
