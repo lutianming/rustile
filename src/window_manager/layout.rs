@@ -16,15 +16,24 @@ const CWStackMode: libc::c_uint = 1<<6;
 
 pub trait Layout {
     fn configure(&self, windows: &[Window], wm: &WindowManager);
+    fn toggle(&mut self) {}
+    fn get_type(&self) -> Type;
 }
 
 pub enum Direction {
     Vertical,
     Horizontal,
 }
+
+#[derive(PartialEq)]
+pub enum Type {
+    Tiling,
+}
+
 pub struct TilingLayout {
     direction: Direction,
 }
+
 impl TilingLayout {
     pub fn new(d: Direction) -> TilingLayout{
         TilingLayout {
@@ -34,6 +43,13 @@ impl TilingLayout {
 }
 
 impl Layout for TilingLayout {
+    fn get_type(&self) -> Type { Type::Tiling }
+    fn toggle(&mut self) {
+        match self.direction {
+            Direction::Vertical => self.direction = Direction::Horizontal,
+            Direction::Horizontal => self.direction = Direction::Vertical,
+        }
+    }
     /// once we add or remove a window, we need to reconfig
     fn configure(&self, windows: &[Window], wm: &WindowManager) {
         let size = windows.len();
