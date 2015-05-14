@@ -62,19 +62,31 @@ impl Layout for TilingLayout {
             let screen_width = xlib::XDisplayWidth(wm.display, wm.screen_num);
             let mask = CWX | CWY | CWHeight | CWWidth;
 
-            let mut x = 0;
-            let width = screen_width / size as i32;
-            for w in windows {
+            let width = screen_width  / size as libc::c_int;
+            let height = screen_height / size as libc::c_int;
+
+            for (i, w) in windows.iter().enumerate() {
+                println!("{}", i);
                 let mut change = xlib::XWindowChanges {
-                    x: x,
+                    x: 0,
                     y: 0,
-                    width: width,
+                    width: screen_width,
                     height: screen_height,
                     border_width: 0,
                     sibling: 0,
                     stack_mode: 0
                 };
-                x = x + width;
+                match self.direction {
+                    Direction::Vertical => {
+                        change.y = height * i as libc::c_int;
+                        change.height = height;
+                    }
+                    Direction::Horizontal => {
+                        change.x = width * i as libc::c_int;
+                        change.width = width;
+                    }
+                };
+
                 debug!("config x: {}, y: {}, width: {}, height: {}",
                        change.x, change.y, change.width, change.height);
                 xlib::XConfigureWindow(wm.display, *w, mask, &mut change);

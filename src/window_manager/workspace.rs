@@ -29,7 +29,7 @@ impl Workspace {
         Workspace {
             root: 0,
             windows: Vec::new(),
-            layout: Box::new(layout::TilingLayout::new(layout::Direction::Vertical))
+            layout: Box::new(layout::TilingLayout::new(layout::Direction::Horizontal))
         }
     }
 
