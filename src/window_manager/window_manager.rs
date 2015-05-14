@@ -1,15 +1,42 @@
+extern crate libc;
 use std::ptr;
 use std::mem;
+use std::slice::from_raw_parts;
+use std::string::String;
+use std::collections::HashMap;
 use x11::xlib;
 use x11::keysym;
 
 use super::config::Config;
+use super::workspace::Workspace;
 use super::handler;
 
-pub struct WindowManager {
-    display: *mut xlib::Display,
-    root:    xlib::Window,
 
+fn cast_event<T>(e: &xlib::XEvent) -> T {
+    unsafe{
+        mem::transmute_copy::<xlib::XEvent, T>(e)
+    }
+}
+
+fn get_text_property(display: *mut xlib::Display, window: xlib::Window, atom: xlib::Atom) -> Option<String>{
+    unsafe{
+        let mut prop: xlib::XTextProperty = mem::zeroed();
+        let r = xlib::XGetTextProperty(display, window, &mut prop, atom);
+        if r == 0 {
+            None
+        }else{
+            Some(String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize + 1 ))
+        }
+    }
+}
+
+pub struct WindowManager {
+    pub display: *mut xlib::Display,
+    pub screen_num: libc::c_int,
+    pub root:    xlib::Window,
+
+    pub workspaces: HashMap<char, Workspace>,
+    pub workspace: Workspace,
     config: Config
 }
 
@@ -20,15 +47,21 @@ impl WindowManager {
             if display == ptr::null_mut() {
                 panic!("can't open display")
             }
-	    let screen  = xlib::XDefaultScreenOfDisplay(display);
-	    let root    = xlib::XRootWindowOfScreen(screen);
+	    let screen_num  = xlib::XDefaultScreen(display);
+	    let root    = xlib::XRootWindow(display, screen_num);
 
-	    WindowManager {
+	    let mut wm = WindowManager {
 	        display: display,
+                screen_num: screen_num,
 	        root:    root,
 
                 config: Config::load(),
-	    }
+                workspaces: HashMap::new(),
+                workspace: Workspace::new(),
+            };
+            let space = Workspace::new();
+            wm.workspaces.insert('1', space);
+            wm
 	}
     }
 
@@ -41,6 +74,7 @@ impl WindowManager {
             xlib::XSync(self.display, 0);
         }
 
+        let mut workspace = Workspace::new();
         loop {
             //handle events here
             let mut e = xlib::XEvent{
@@ -50,29 +84,121 @@ impl WindowManager {
             unsafe {
                 xlib::XNextEvent(self.display, &mut e);
                 let t = e.get_type();
-
                 match t {
                     xlib::CreateNotify => {
-                        debug!("create notify");
-                        let event = mem::transmute_copy::<xlib::XEvent, xlib::XCreateWindowEvent>(&e);
+                        let event = cast_event::<xlib::XCreateWindowEvent>(&e);
 
-                        // chance attributes before display
+                        if event.override_redirect != 0 {
+                            continue;
+                        }
+
+                        // change attributes before display
                         let mut attrs: xlib::XSetWindowAttributes = mem::zeroed();
                         attrs.event_mask = xlib::KeyReleaseMask;
                         let valuemask = xlib::CWEventMask;
                         xlib::XChangeWindowAttributes(self.display, event.window, valuemask, &mut attrs);
 
-                        // display window
-                        xlib::XMapWindow(self.display, event.window);
+                        // add to workspace
+                        // let mut w = self.workspaces.get_mut(&'1');
+                        // match w {
+                        //     Some(workspace) => {
+                        //         workspace.add(event.window);
+                        //         workspace.config(self);
+                        //     }
+                        //     None => {}
+                        // }
+
+                        // get window property
+                        let n = get_text_property(self.display, event.window, xlib::XA_WM_NAME);
+                        match n {
+                            Some(s) => {debug!("create window {} for {}", event.window, s);}
+                            None => {}
+                        }
+
+                        // let mut actual_type_return: u64 = 0;
+                        // let mut actual_format_return: i32 = 0;
+                        // let mut nitem_return: libc::c_ulong = 0;
+                        // let mut bytes_after_return: libc::c_ulong = 0;
+                        // let mut prop_return: *mut libc::c_uchar = mem::zeroed();
+                        // let r = xlib::XGetWindowProperty(self.display, event.window, xlib::XA_WM_NAME,
+                        //                          0, 0xFFFFFFFF, 0, 0,
+                        //                          &mut actual_type_return,
+                        //                          &mut actual_format_return,
+                        //                          &mut nitem_return,
+                        //                          &mut bytes_after_return,
+                        //                          &mut prop_return);
+
+                        // debug!("result get wp {}", r);
+                        // if r == 0 {
+
+                        // }else{
+                        //     debug!("actual format return {}", actual_format_return);
+                        //     if actual_format_return == 0 {
+
+                        //     }
+                        //     else {
+                        //         // let s = from_raw_parts(prop_return as *const libc::c_ulong, nitems_return as usize).iter()
+                        //         //     .map(|&c| c as u64)
+                        //         //     .collect();
+                        //         let s = String::from_raw_parts(prop_return, nitem_return as usize, nitem_return as usize + 1 );
+                        //         println!("{}", s);
+
+                        //     }
+                        // }
+
+
+
+
                     }
                     xlib::DestroyNotify => {
                         debug!("destroy notify");
-                        let event = mem::transmute_copy::<xlib::XEvent, xlib::XDestroyWindowEvent>(&e);
+                        let event = cast_event::<xlib::XDestroyWindowEvent>(&e);
+                    }
+                    xlib::MapNotify => {
+                        debug!("map notify");
+                        let event = cast_event::<xlib::XMapEvent>(&e);
+                        println!("event {}", event.event);
+                        println!("w {}", event.window);
+                    }
+                    xlib::UnmapNotify => {
+                        debug!("unmap notify");
+                        let event = cast_event::<xlib::XUnmapEvent>(&e);
+
+                        match workspace.contain(event.window) {
+                            Some(index) => {
+                                workspace.remove(event.window);
+                                workspace.config(self);                                             }
+                            None => {}
+                        }
+                    }
+                    xlib::MapRequest => {
+                        debug!("map request");
+                        let event = cast_event::<xlib::XMapRequestEvent>(&e);
+                        println!("w {}", event.window);
+                        xlib::XMapWindow(self.display, event.window);
+
+                        // add app top-level window to workspace
+                        let mut attrs: xlib::XWindowAttributes = mem::zeroed();
+                        xlib::XGetWindowAttributes(self.display, event.window, &mut attrs);
+
+                        if attrs.override_redirect == 0{
+                            debug!("top level window");
+
+                            if workspace.contain(event.window).is_none() {
+                                workspace.add(event.window);
+                                workspace.config(self);
+                            }
+                        }
+
+                    }
+                    xlib::ClientMessage => {
+                        debug!("client message");
+                        let event = cast_event::<xlib::XClientMessageEvent>(&e);
 
                     }
                     xlib::KeyRelease => {
                         debug!("key release");
-                        let mut event = mem::transmute_copy::<xlib::XEvent, xlib::XKeyEvent>(&e);
+                        let mut event = cast_event::<xlib::XKeyEvent>(&e);
 
                         if event.state > 0 {
                             let mut sym: xlib::KeySym = 0;
@@ -94,8 +220,29 @@ impl WindowManager {
                             }
                         }
                     }
-                    _ => {
+                    xlib::ConfigureNotify => {
+                        debug!("configure notify");
+                    }
+                    xlib::ConfigureRequest =>{
+                        debug!("configure request");
+                        let mut event = cast_event::<xlib::XConfigureRequestEvent>(&e);
 
+                        // let mut change = xlib::XWindowChanges {
+                        //     x: event.x,
+                        //     y: event.y,
+                        //     width: event.width,
+                        //     height: event.height,
+                        //     border_width: event.border_width,
+                        //     sibling: event.above,
+                        //     stack_mode: event.detail
+                        // };
+                        // debug!("config x: {}, y: {}, width: {}, height: {}",
+                        //        change.x, change.y, change.width, change.height);
+                        // xlib::XConfigureWindow(event.display, event.window, event.value_mask as u32, &mut change);
+
+                    }
+                    _ => {
+                        debug!("unhandled event {}", t);
                     }
                 }
             }
