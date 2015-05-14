@@ -86,14 +86,9 @@ impl WindowManager {
                                 mask: event.state,
                             };
                             println!("key {} {}", event.state, sym);
-                            match self.config.bindsyms.get(&b) {
-                                Some(v) => {
-                                    // println!("{}", v[1]);
-                                    // if v[0] == "exec" {
-                                    //     let (v1, v2) = v.split_at(1);
-                                    //     let args = v2.iter().map(|x| &x[..]).collect();
-                                    //     self.config.run_cmd(&args);
-                                    // }
+                            match self.config.bindsyms.get_mut(&b) {
+                                Some(handler) => {
+                                    handler.handle();
                                 }
                                 None => {
                                     println!("no bind")

@@ -17,7 +17,7 @@ use super::handler::{ KeyBind, Handler, ExecHandler };
 
 pub struct Config {
     mod_key: u32,
-    pub bindsyms: HashMap<KeyBind, Vec<String>>,
+    pub bindsyms: HashMap<KeyBind, Box<Handler>>,
 }
 
 #[test]
@@ -113,11 +113,14 @@ impl Config {
         let keys: Vec<&str> = keyseq[0].split("+").collect();
 
         let bind = KeyBind::build(self.mod_key, &keys);
-        println!("binding {} {}", bind.key, bind.mask);
-        let mut args: Vec<String> = Vec::new();
-        for c in cmd {
-            args.push(c.to_string());
+
+        let (name, args) = cmd.split_at(1);
+        match name[0] {
+            "exec" => {
+                let handler = ExecHandler::build(args);
+                self.bindsyms.insert(bind, Box::new(handler));
+            }
+            _ => {}
         }
-        self.bindsyms.insert(bind, args);
     }
 }
