@@ -1,8 +1,14 @@
 extern crate x11;
+extern crate libc;
 
 use std::ffi;
 use std::process::Command;
+use std::boxed::Box;
+
 use x11::xlib;
+use super::WindowManager;
+use super::workspace::Workspaces;
+use super::layout;
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 pub struct KeyBind {
@@ -19,11 +25,11 @@ impl KeyBind {
                 "$mod" => mask = mask | mod_key,
                 "Shift" => mask = mask | xlib::ShiftMask,
                 "Ctrl" => mask = mask | xlib::ControlMask,
-                "mod1" => mask = mask | xlib::Mod1Mask,
-                "mod2" => mask = mask | xlib::Mod2Mask,
-                "mod3" => mask = mask | xlib::Mod3Mask,
-                "mod4" => mask = mask | xlib::Mod4Mask,
-                "mod5" => mask = mask | xlib::Mod5Mask,
+                "Mod1" => mask = mask | xlib::Mod1Mask,
+                "Mod2" => mask = mask | xlib::Mod2Mask,
+                "Mod3" => mask = mask | xlib::Mod3Mask,
+                "Mod4" => mask = mask | xlib::Mod4Mask,
+                "Mod5" => mask = mask | xlib::Mod5Mask,
                 _ => {
                     let tmp = ffi::CString::new(*key).unwrap();
                     unsafe{
@@ -40,21 +46,56 @@ impl KeyBind {
         }
     }
 }
+
 pub trait Handler {
-    fn handle(&mut self);
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int);
 }
 
 pub struct ExecHandler {
-    cmd: Command
+    pub cmd: Command
+}
+
+pub struct LayoutHandler {
+    layout_type: layout::Type,
 }
 
 impl Handler for ExecHandler {
-    fn handle(&mut self) {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
         self.cmd.spawn();
     }
 }
+
+impl Handler for LayoutHandler {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
+        let current = workspaces.current_workspace();
+        let t = current.layout.get_type();
+        if t == self.layout_type {
+            debug!("layout toggle");
+            current.layout.toggle();
+            current.config(display, screen_num);
+        }
+        else{
+            match self.layout_type {
+                layout::Type::Tiling => {
+                    debug!("change layout to Tiling");
+                    let tmp = layout::TilingLayout::new(layout::Direction::Horizontal);
+                    current.layout = Box::new(tmp);
+                    current.config(display, screen_num);
+                }
+            }
+        }
+    }
+}
+
+impl LayoutHandler {
+    pub fn new(layout: layout::Type) -> LayoutHandler{
+        LayoutHandler {
+            layout_type: layout
+        }
+    }
+}
 impl ExecHandler {
-    pub fn build(tokens: &[&str]) -> ExecHandler {
+    pub fn new(tokens: &[&str]) -> ExecHandler {
         let (name, args) = tokens.split_at(1);
         let mut cmd = Command::new(name[0]);
 

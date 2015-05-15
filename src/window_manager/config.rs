@@ -12,7 +12,8 @@ use std::env;
 use x11::xlib;
 use std::boxed::Box;
 
-use super::handler::{ KeyBind, Handler, ExecHandler };
+use super::layout;
+use super::handler::{ KeyBind, Handler, ExecHandler, LayoutHandler };
 
 
 pub struct Config {
@@ -49,7 +50,7 @@ impl Config {
         };
 
         let mut pathbuf = PathBuf::from(home);
-        pathbuf.push("config");
+        pathbuf.push(".rustile");
         match File::open(pathbuf.as_path()) {
             Ok(f) => {
                 let buf = BufReader::new(f);
@@ -77,28 +78,31 @@ impl Config {
             mod_key: xlib::Mod4Mask,
             bindsyms: HashMap::new(),
         };
-
-        let b = vec!["$mod+c", "exec", "dmenu_run"];
-        config.bind_sym(&b);
+        // let dmenu = vec!["$mod+c", "exec", "dmenu_run"];
+        // let split = vec!["$mod+b", "layout", "split"];
+        // config.bind_sym(&dmenu);
+        // config.bind_sym(&split);
         config
     }
 
-    fn read_line(&self, line: String) {
+    fn read_line(&mut self, line: String) {
         // # is comment
         if !line.starts_with("#") {
             let tokens: Vec<&str> = line.split(' ').collect();
             let (cmd, args) = tokens.split_at(1);
             match cmd[0] {
                 "set" => {
-
+                    if args.len() > 1 {
+                        debug!("set var");
+                        self.set_var(args[0], args[1]);
+                    }
                 }
                 "exec" => {
-                    let mut handler = ExecHandler::build(args);
-                    handler.handle();
-                    // self.run_cmd(&(args.to_vec()));
+                    let mut handler = ExecHandler::new(args);
+                    handler.cmd.spawn();
                 }
                 "bind" => {
-
+                    self.bind_sym(args);
                 }
                 _ => {
                     // not supported cmd, ignore
@@ -107,7 +111,7 @@ impl Config {
         }
     }
 
-    fn bind_sym(&mut self, args: &Vec<&str>) {
+    fn bind_sym(&mut self, args: &[&str]) {
         let (keyseq, cmd) = args.split_at(1);
         let keys: Vec<&str> = keyseq[0].split("+").collect();
 
@@ -116,8 +120,35 @@ impl Config {
         let (name, args) = cmd.split_at(1);
         match name[0] {
             "exec" => {
-                let handler = ExecHandler::build(args);
+                let handler = ExecHandler::new(args);
                 self.bindsyms.insert(bind, Box::new(handler));
+            }
+            "layout" => {
+                let layout = args[0];
+                match layout {
+                    "split" => {
+                        let handler = LayoutHandler::new(layout::Type::Tiling);
+                        self.bindsyms.insert(bind, Box::new(handler));
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+    fn set_var(&mut self, key: &str, val: &str) {
+        match key {
+            "$mod" => {
+                self.mod_key = match val {
+                    "Shift" => xlib::ShiftMask,
+                    "Ctrl"  => xlib::ControlMask,
+                    "Mod1"  => xlib::Mod1Mask,
+                    "Mod2" => xlib::Mod2Mask,
+                    "Mod3" => xlib::Mod3Mask,
+                    "Mod4" => xlib::Mod4Mask,
+                    "Mod5" => xlib::Mod5Mask,
+                    _ => xlib::Mod4Mask
+                };
             }
             _ => {}
         }
