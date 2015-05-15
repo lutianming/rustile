@@ -177,7 +177,10 @@ impl WindowManager {
                         let mut attrs: xlib::XWindowAttributes = mem::zeroed();
                         xlib::XGetWindowAttributes(self.display, event.window, &mut attrs);
 
-                        if attrs.override_redirect == 0{
+                        let mut window_return: xlib::Window = 0;
+                        let transientfor_hint = xlib::XGetTransientForHint(self.display, event.window, &mut window_return);
+                        println!("trans hint {}", transientfor_hint);
+                        if attrs.override_redirect == 0 && transientfor_hint == 0 {
                             debug!("top level window");
                             let mut workspace = self.workspaces.current_workspace();
                             if workspace.contain(event.window).is_none() {
