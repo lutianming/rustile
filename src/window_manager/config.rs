@@ -13,7 +13,8 @@ use x11::xlib;
 use std::boxed::Box;
 
 use super::layout;
-use super::handler::{ KeyBind, Handler, ExecHandler, LayoutHandler };
+use super::handler::{ KeyBind, Handler };
+use super::handler::{ ExecHandler, LayoutHandler, WorkspaceHandler };
 
 
 pub struct Config {
@@ -133,9 +134,23 @@ impl Config {
                     _ => {}
                 }
             }
+            "workspace" => {
+                let c = args[0].chars().nth(0);
+                match c {
+                    Some(v) => {
+                        let handler = WorkspaceHandler {
+                            key: v,
+                        };
+                        self.bindsyms.insert(bind, Box::new(handler));
+                    }
+                    None => {}
+                }
+
+            }
             _ => {}
         }
     }
+
     fn set_var(&mut self, key: &str, val: &str) {
         match key {
             "$mod" => {

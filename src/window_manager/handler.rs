@@ -61,7 +61,7 @@ pub struct LayoutHandler {
 
 /// switch to another workspace
 pub struct WorkspaceHandler {
-    key: char,
+    pub key: char,
 }
 
 impl Handler for WorkspaceHandler {
