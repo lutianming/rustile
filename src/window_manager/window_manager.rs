@@ -4,11 +4,12 @@ use std::mem;
 use std::slice::from_raw_parts;
 use std::string::String;
 use std::collections::HashMap;
+use std::boxed::Box;
 use x11::xlib;
 use x11::keysym;
 
 use super::config::Config;
-use super::workspace::Workspace;
+use super::workspace::{ Workspace, Workspaces };
 use super::handler;
 
 
@@ -25,7 +26,10 @@ fn get_text_property(display: *mut xlib::Display, window: xlib::Window, atom: xl
         if r == 0 {
             None
         }else{
-            Some(String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize + 1 ))
+            let s = String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize + 1 ).clone();
+            let text = Some(s);
+            xlib::XFree(prop.value as *mut libc::c_void);
+            text
         }
     }
 }
@@ -35,8 +39,7 @@ pub struct WindowManager {
     pub screen_num: libc::c_int,
     pub root:    xlib::Window,
 
-    pub workspaces: HashMap<char, Workspace>,
-    pub workspace: Workspace,
+    pub workspaces: Workspaces,
     config: Config
 }
 
@@ -56,11 +59,9 @@ impl WindowManager {
 	        root:    root,
 
                 config: Config::load(),
-                workspaces: HashMap::new(),
-                workspace: Workspace::new(),
+                workspaces: Workspaces::new()
             };
-            let space = Workspace::new();
-            wm.workspaces.insert('1', space);
+            wm.workspaces.create_workspace('1');
             wm
 	}
     }
@@ -74,7 +75,6 @@ impl WindowManager {
             xlib::XSync(self.display, 0);
         }
 
-        let mut workspace = Workspace::new();
         loop {
             //handle events here
             let mut e = xlib::XEvent{
@@ -163,11 +163,12 @@ impl WindowManager {
                     xlib::UnmapNotify => {
                         debug!("unmap notify");
                         let event = cast_event::<xlib::XUnmapEvent>(&e);
-
+                        let workspace = self.workspaces.current_workspace();
                         match workspace.contain(event.window) {
                             Some(index) => {
                                 workspace.remove(event.window);
-                                workspace.config(self);                                             }
+                                workspace.config(self.display, self.screen_num);
+                            }
                             None => {}
                         }
                     }
@@ -183,10 +184,10 @@ impl WindowManager {
 
                         if attrs.override_redirect == 0{
                             debug!("top level window");
-
+                            let mut workspace = self.workspaces.current_workspace();
                             if workspace.contain(event.window).is_none() {
                                 workspace.add(event.window);
-                                workspace.config(self);
+                                workspace.config(self.display, self.screen_num);
                             }
                         }
 
@@ -210,12 +211,14 @@ impl WindowManager {
                                 mask: event.state,
                             };
                             debug!("key {} {}", event.state, sym);
+                            // let mut h: Box<handler::Handler>;
                             match self.config.bindsyms.get_mut(&b) {
                                 Some(handler) => {
-                                    handler.handle();
+                                    handler.handle(&mut self.workspaces, self.display, self.screen_num);
                                 }
                                 None => {
-                                    println!("no bind")
+                                    println!("no bind");
+                                    continue;
                                 }
                             }
                         }

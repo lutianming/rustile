@@ -1,14 +1,17 @@
+extern crate libc;
+
+use x11::xlib;
 use x11::xlib::Window;
 
 use std::boxed::Box;
-
+use std::collections::HashMap;
 use super::layout;
 use super::WindowManager;
 
 pub struct Workspace {
     root: Window,
     windows: Vec<Window>,
-    layout: Box<layout::Layout>
+    pub layout: Box<layout::Layout>
 }
 
 impl Workspace {
@@ -33,8 +36,35 @@ impl Workspace {
         }
     }
 
-    pub fn config(&self, wm: &WindowManager) {
+    pub fn config(&self, display: *mut xlib::Display, screen_num: libc::c_int) {
         debug!("size {}", self.windows.len());
-        self.layout.configure(&self.windows, wm);
+        self.layout.configure(&self.windows, display, screen_num);
     }
+}
+
+pub struct Workspaces {
+    current: char,
+    pub spaces: HashMap<char, Workspace>,
+
+}
+
+impl Workspaces {
+    pub fn new() -> Workspaces {
+        Workspaces {
+            current: '1',
+            spaces: HashMap::new()
+        }
+    }
+
+    pub fn create_workspace(&mut self, key: char) {
+        if !self.spaces.contains_key(&key) {
+            let space = Workspace::new();
+            self.spaces.insert(key, space);
+        }
+    }
+
+    pub fn current_workspace(&mut self) -> &mut Workspace{
+        self.spaces.get_mut(&self.current).unwrap()
+    }
+
 }

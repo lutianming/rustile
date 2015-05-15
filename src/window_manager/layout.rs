@@ -3,8 +3,6 @@ extern crate libc;
 use x11::xlib::Window;
 use x11::xlib;
 
-use super::WindowManager;
-
 const CWX: libc::c_uint = 1<<0;
 const CWY: libc::c_uint = 1<<1;
 const CWWidth: libc::c_uint = 1<<2;
@@ -15,7 +13,7 @@ const CWStackMode: libc::c_uint = 1<<6;
 
 
 pub trait Layout {
-    fn configure(&self, windows: &[Window], wm: &WindowManager);
+    fn configure(&self, windows: &[Window], display: *mut xlib::Display,screen_num: libc::c_int);
     fn toggle(&mut self) {}
     fn get_type(&self) -> Type;
 }
@@ -51,15 +49,15 @@ impl Layout for TilingLayout {
         }
     }
     /// once we add or remove a window, we need to reconfig
-    fn configure(&self, windows: &[Window], wm: &WindowManager) {
+    fn configure(&self, windows: &[Window], display: *mut xlib::Display,screen_num: libc::c_int,) {
         let size = windows.len();
         if size == 0 {
             return;
         }
 
         unsafe {
-            let screen_height = xlib::XDisplayHeight(wm.display, wm.screen_num);
-            let screen_width = xlib::XDisplayWidth(wm.display, wm.screen_num);
+            let screen_height = xlib::XDisplayHeight(display, screen_num);
+            let screen_width = xlib::XDisplayWidth(display, screen_num);
             let mask = CWX | CWY | CWHeight | CWWidth;
 
             let width = screen_width  / size as libc::c_int;
@@ -89,7 +87,7 @@ impl Layout for TilingLayout {
 
                 debug!("config x: {}, y: {}, width: {}, height: {}",
                        change.x, change.y, change.width, change.height);
-                xlib::XConfigureWindow(wm.display, *w, mask, &mut change);
+                xlib::XConfigureWindow(display, *w, mask, &mut change);
             }
         }
     }
