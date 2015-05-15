@@ -63,7 +63,6 @@ impl Workspace {
 pub struct Workspaces {
     current: char,
     pub spaces: HashMap<char, Workspace>,
-
 }
 
 impl Workspaces {
@@ -81,8 +80,28 @@ impl Workspaces {
         }
     }
 
+    pub fn delete_workspace(&mut self, key: char) {
+        self.spaces.remove(&key);
+    }
+
+    pub fn get_workspace(&mut self, key: char) -> Option<&mut Workspace>{
+        self.spaces.get_mut(&key)
+    }
+
     pub fn current_workspace(&mut self) -> &mut Workspace{
         self.spaces.get_mut(&self.current).unwrap()
     }
+
+    pub fn current_workspace_key(&self) -> char {
+        self.current
+    }
+
+    pub fn switch_current(&mut self, new: char){
+        if new != self.current {
+
+        }
+    }
+
+
 
 }
