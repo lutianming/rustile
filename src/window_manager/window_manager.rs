@@ -1,6 +1,8 @@
 extern crate libc;
 use std::ptr;
 use std::mem;
+use std::ffi;
+use std::str;
 use std::slice::from_raw_parts;
 use std::string::String;
 use std::collections::HashMap;
@@ -22,6 +24,25 @@ unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XE
     1
 }
 
+
+fn get_atom_name(display: *mut xlib::Display, atom: xlib::Atom) -> Result<String, i32>{
+    unsafe{
+        let name = xlib::XGetAtomName(display, atom);
+        if name == ptr::null_mut() {
+            return Err(0);
+        }
+        let s = ffi::CStr::from_ptr(name);
+        let s = s.to_bytes();
+        match str::from_utf8(s) {
+            Ok(v) => {
+                let tmp = Ok(v.to_string());
+                xlib::XFree(name as *mut libc::c_void);
+                tmp
+            }
+            _ => Err(0)
+        }
+    }
+}
 
 fn get_text_property(display: *mut xlib::Display, window: xlib::Window, atom: xlib::Atom) -> Option<String>{
     unsafe{
@@ -205,6 +226,35 @@ impl WindowManager {
                         debug!("client message");
                         // let event = cast_event::<xlib::XClientMessageEvent>(&e);
                         let event: xlib::XClientMessageEvent = From::from(e);
+                        let s = get_atom_name(self.display, event.message_type);
+                        match s {
+                            Ok(v) => println!("{}", v),
+                            _ => {}
+                        }
+
+                        match event.format {
+                            8 => {
+                                for i in 0..20 {
+                                    println!("{}", event.data.get_byte(i))
+                                }
+                            }
+                            16 => {
+                                for i in 0..10 {
+                                    println!("{}", event.data.get_short(i))
+                                }
+                            }
+                            32 => {
+                                for i in 0..5 {
+                                    let a = event.data.get_long(i);
+                                    let s = get_atom_name(self.display, a as u64);
+                                    match s {
+                                        Ok(v) => println!("{}", v),
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
                     }
                     xlib::KeyRelease => {
                         debug!("key release");
