@@ -180,17 +180,8 @@ impl WindowManager {
                     xlib::DestroyNotify => {
                         debug!("destroy notify");
                         let event: xlib::XDestroyWindowEvent = From::from(e);
-                    }
-                    xlib::MapNotify => {
-                        debug!("map notify");
-                        let event: xlib::XMapEvent = From::from(e);
-                        println!("event {}", event.event);
-                        println!("w {}", event.window);
-                    }
-                    xlib::UnmapNotify => {
-                        debug!("unmap notify");
-                        let event: xlib::XUnmapEvent = From::from(e);
-                        let workspace = self.workspaces.current_workspace();
+
+                        let workspace = self.workspaces.current();
                         match workspace.contain(event.window) {
                             Some(index) => {
                                 workspace.remove(event.window);
@@ -199,10 +190,18 @@ impl WindowManager {
                             None => {}
                         }
                     }
+                    xlib::MapNotify => {
+                        debug!("map notify");
+                        let event: xlib::XMapEvent = From::from(e);
+
+                    }
+                    xlib::UnmapNotify => {
+                        debug!("unmap notify");
+                        let event: xlib::XUnmapEvent = From::from(e);
+                    }
                     xlib::MapRequest => {
                         debug!("map request");
                         let event: xlib::XMapRequestEvent = From::from(e);
-                        println!("w {}", event.window);
                         xlib::XMapWindow(self.display, event.window);
 
                         // add app top-level window to workspace
