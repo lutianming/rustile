@@ -23,7 +23,7 @@ pub enum Direction {
     Horizontal,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Type {
     Tiling,
 }
