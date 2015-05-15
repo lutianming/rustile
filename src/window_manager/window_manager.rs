@@ -91,7 +91,7 @@ impl WindowManager {
                 config: Config::load(),
                 workspaces: Workspaces::new()
             };
-            wm.workspaces.create_workspace('1');
+            wm.workspaces.create('1');
             wm
 	}
     }
@@ -182,7 +182,7 @@ impl WindowManager {
                         println!("trans hint {}", transientfor_hint);
                         if attrs.override_redirect == 0 && transientfor_hint == 0 {
                             debug!("top level window");
-                            let mut workspace = self.workspaces.current_workspace();
+                            let mut workspace = self.workspaces.current();
                             if workspace.contain(event.window).is_none() {
                                 workspace.add(event.window);
                                 workspace.config(self.display, self.screen_num);

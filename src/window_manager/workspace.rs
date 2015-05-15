@@ -89,26 +89,28 @@ impl Workspaces {
         }
     }
 
-    pub fn create_workspace(&mut self, key: char) {
-        if !self.spaces.contains_key(&key) {
-            let space = Workspace::new();
-            self.spaces.insert(key, space);
-        }
+    pub fn contain(&mut self, key: char) -> bool{
+        self.spaces.contains_key(&key)
     }
 
-    pub fn delete_workspace(&mut self, key: char) {
+    pub fn create(&mut self, key: char) {
+        let space = Workspace::new();
+        self.spaces.insert(key, space);
+    }
+
+    pub fn delete(&mut self, key: char) {
         self.spaces.remove(&key);
     }
 
-    pub fn get_workspace(&mut self, key: char) -> Option<&mut Workspace>{
+    pub fn get(&mut self, key: char) -> Option<&mut Workspace>{
         self.spaces.get_mut(&key)
     }
 
-    pub fn current_workspace(&mut self) -> &mut Workspace{
+    pub fn current(&mut self) -> &mut Workspace{
         self.spaces.get_mut(&self.current).unwrap()
     }
 
-    pub fn current_workspace_key(&self) -> char {
+    pub fn current_name(&self) -> char {
         self.current
     }
 
