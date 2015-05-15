@@ -13,12 +13,6 @@ use super::workspace::{ Workspace, Workspaces };
 use super::handler;
 
 
-fn cast_event<T>(e: &xlib::XEvent) -> T {
-    unsafe{
-        mem::transmute_copy::<xlib::XEvent, T>(e)
-    }
-}
-
 fn get_text_property(display: *mut xlib::Display, window: xlib::Window, atom: xlib::Atom) -> Option<String>{
     unsafe{
         let mut prop: xlib::XTextProperty = mem::zeroed();
@@ -86,7 +80,7 @@ impl WindowManager {
                 let t = e.get_type();
                 match t {
                     xlib::CreateNotify => {
-                        let event = cast_event::<xlib::XCreateWindowEvent>(&e);
+                        let event: xlib::XCreateWindowEvent = From::from(e);
 
                         if event.override_redirect != 0 {
                             continue;
@@ -152,17 +146,17 @@ impl WindowManager {
                     }
                     xlib::DestroyNotify => {
                         debug!("destroy notify");
-                        let event = cast_event::<xlib::XDestroyWindowEvent>(&e);
+                        let event: xlib::XDestroyWindowEvent = From::from(e);
                     }
                     xlib::MapNotify => {
                         debug!("map notify");
-                        let event = cast_event::<xlib::XMapEvent>(&e);
+                        let event: xlib::XMapEvent = From::from(e);
                         println!("event {}", event.event);
                         println!("w {}", event.window);
                     }
                     xlib::UnmapNotify => {
                         debug!("unmap notify");
-                        let event = cast_event::<xlib::XUnmapEvent>(&e);
+                        let event: xlib::XUnmapEvent = From::from(e);
                         let workspace = self.workspaces.current_workspace();
                         match workspace.contain(event.window) {
                             Some(index) => {
@@ -174,7 +168,7 @@ impl WindowManager {
                     }
                     xlib::MapRequest => {
                         debug!("map request");
-                        let event = cast_event::<xlib::XMapRequestEvent>(&e);
+                        let event: xlib::XMapRequestEvent = From::from(e);
                         println!("w {}", event.window);
                         xlib::XMapWindow(self.display, event.window);
 
@@ -194,12 +188,12 @@ impl WindowManager {
                     }
                     xlib::ClientMessage => {
                         debug!("client message");
-                        let event = cast_event::<xlib::XClientMessageEvent>(&e);
-
+                        // let event = cast_event::<xlib::XClientMessageEvent>(&e);
+                        let event: xlib::XClientMessageEvent = From::from(e);
                     }
                     xlib::KeyRelease => {
                         debug!("key release");
-                        let mut event = cast_event::<xlib::XKeyEvent>(&e);
+                        let mut event: xlib::XKeyEvent = From::from(e);
 
                         if event.state > 0 {
                             let mut sym: xlib::KeySym = 0;
@@ -228,8 +222,6 @@ impl WindowManager {
                     }
                     xlib::ConfigureRequest =>{
                         debug!("configure request");
-                        let mut event = cast_event::<xlib::XConfigureRequestEvent>(&e);
-
                         // let mut change = xlib::XWindowChanges {
                         //     x: event.x,
                         //     y: event.y,
@@ -241,6 +233,7 @@ impl WindowManager {
                         // };
                         // debug!("config x: {}, y: {}, width: {}, height: {}",
                         //        change.x, change.y, change.width, change.height);
+                        let mut event: xlib::XConfigureRequestEvent = From::from(e);
                         // xlib::XConfigureWindow(event.display, event.window, event.value_mask as u32, &mut change);
 
                     }
