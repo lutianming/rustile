@@ -68,22 +68,9 @@ impl Handler for ExecHandler {
 impl Handler for LayoutHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
         let current = workspaces.current_workspace();
-        let t = current.layout.get_type();
-        if t == self.layout_type {
-            debug!("layout toggle");
-            current.layout.toggle();
-            current.config(display, screen_num);
-        }
-        else{
-            match self.layout_type {
-                layout::Type::Tiling => {
-                    debug!("change layout to Tiling");
-                    let tmp = layout::TilingLayout::new(layout::Direction::Horizontal);
-                    current.layout = Box::new(tmp);
-                    current.config(display, screen_num);
-                }
-            }
-        }
+        let t = self.layout_type.clone();
+        current.change_layout(t);
+        current.config(display, screen_num);
     }
 }
 

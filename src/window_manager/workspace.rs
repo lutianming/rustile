@@ -15,6 +15,14 @@ pub struct Workspace {
 }
 
 impl Workspace {
+    pub fn new() -> Workspace {
+        Workspace {
+            root: 0,
+            windows: Vec::new(),
+            layout: Box::new(layout::TilingLayout::new(layout::Direction::Horizontal))
+        }
+    }
+
     pub fn add(&mut self, window: Window) {
         self.windows.push(window);
     }
@@ -28,11 +36,21 @@ impl Workspace {
     pub fn contain(&self, window: Window) -> Option<usize>{
         self.windows.iter().position(|x| *x == window)
     }
-    pub fn new() -> Workspace {
-        Workspace {
-            root: 0,
-            windows: Vec::new(),
-            layout: Box::new(layout::TilingLayout::new(layout::Direction::Horizontal))
+
+    pub fn change_layout(&mut self, layout_type: layout::Type) {
+        let t = self.layout.get_type();
+        if t == layout_type {
+            debug!("layout toggle");
+            self.layout.toggle();
+        }
+        else{
+            match layout_type {
+                layout::Type::Tiling => {
+                    debug!("change layout to Tiling");
+                    let tmp = layout::TilingLayout::new(layout::Direction::Horizontal);
+                    self.layout = Box::new(tmp);
+                }
+            }
         }
     }
 
