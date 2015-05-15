@@ -12,6 +12,16 @@ use super::config::Config;
 use super::workspace::{ Workspace, Workspaces };
 use super::handler;
 
+unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XErrorEvent) -> libc::c_int {
+    // match event.error_code {
+    //     xlib::BadAtom => {
+    //         println!("bad atom");
+    //     }
+    //     _ => {}
+    // }
+    1
+}
+
 
 fn get_text_property(display: *mut xlib::Display, window: xlib::Window, atom: xlib::Atom) -> Option<String>{
     unsafe{
@@ -100,6 +110,7 @@ impl WindowManager {
         let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask;
         let keymask = xlib::KeyPressMask | xlib::KeyReleaseMask;
         unsafe{
+            xlib::XSetErrorHandler(Some(error_handler));
             xlib::XSelectInput(self.display, self.root,
                                mask | keymask);
             xlib::XSync(self.display, 0);
