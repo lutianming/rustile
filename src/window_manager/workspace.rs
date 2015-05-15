@@ -1,7 +1,7 @@
 extern crate libc;
 
 use x11::xlib;
-use x11::xlib::Window;
+use x11::xlib::{ Window, Display };
 
 use std::boxed::Box;
 use std::collections::HashMap;
@@ -26,6 +26,7 @@ impl Workspace {
     pub fn add(&mut self, window: Window) {
         self.windows.push(window);
     }
+
     pub fn remove(&mut self, window: Window) {
         let index = self.contain(window);
         match index {
@@ -33,6 +34,23 @@ impl Workspace {
             None => {}
         };
     }
+
+    pub fn hide(&mut self, display: *mut Display) {
+        for w in self.windows.iter() {
+            unsafe{
+                xlib::XUnmapWindow(display, *w);
+            }
+        }
+    }
+
+    pub fn show(&mut self, display: *mut Display) {
+        for w in self.windows.iter() {
+            unsafe{
+                xlib::XMapWindow(display, *w);
+            }
+        }
+    }
+
     pub fn contain(&self, window: Window) -> Option<usize>{
         self.windows.iter().position(|x| *x == window)
     }
@@ -40,13 +58,11 @@ impl Workspace {
     pub fn change_layout(&mut self, layout_type: layout::Type) {
         let t = self.layout.get_type();
         if t == layout_type {
-            debug!("layout toggle");
             self.layout.toggle();
         }
         else{
             match layout_type {
                 layout::Type::Tiling => {
-                    debug!("change layout to Tiling");
                     let tmp = layout::TilingLayout::new(layout::Direction::Horizontal);
                     self.layout = Box::new(tmp);
                 }
@@ -96,12 +112,27 @@ impl Workspaces {
         self.current
     }
 
-    pub fn switch_current(&mut self, new: char){
+    pub fn switch_current(&mut self, new: char, display: *mut Display){
         if new != self.current {
+            if !self.contain(new) {
+                self.create(new);
+            }
+            let old = self.current;
+            self.current = new;
 
+            match self.get(old) {
+                Some(v) => {
+                    v.hide(display);
+                }
+                None => {}
+            }
+
+            match self.get(new) {
+                Some(v) => {
+                    v.show(display);
+                }
+                None => {}
+            }
         }
     }
-
-
-
 }

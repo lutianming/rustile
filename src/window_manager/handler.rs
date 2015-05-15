@@ -66,19 +66,22 @@ pub struct WorkspaceHandler {
 
 impl Handler for WorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
-        workspaces.switch_current(self.key);
+        debug!("handle workspace");
+        workspaces.switch_current(self.key, display);
     }
 }
 
 impl Handler for ExecHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
+        debug!("handle exec");
         self.cmd.spawn();
     }
 }
 
 impl Handler for LayoutHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
-        let current = workspaces.current_workspace();
+        debug!("handle layout");
+        let current = workspaces.current();
         let t = self.layout_type.clone();
         current.change_layout(t);
         current.config(display, screen_num);
