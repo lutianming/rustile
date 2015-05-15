@@ -59,6 +59,17 @@ pub struct LayoutHandler {
     layout_type: layout::Type,
 }
 
+/// switch to another workspace
+pub struct WorkspaceHandler {
+    key: char,
+}
+
+impl Handler for WorkspaceHandler {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
+        workspaces.switch_current(self.key);
+    }
+}
+
 impl Handler for ExecHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
         self.cmd.spawn();
