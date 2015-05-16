@@ -4,6 +4,7 @@ extern crate libc;
 use std::ffi;
 use std::process::Command;
 use std::boxed::Box;
+use std::ptr;
 
 use x11::xlib;
 use x11::xlib::{ Display, Window };
@@ -63,6 +64,57 @@ pub struct LayoutHandler {
 /// switch to another workspace
 pub struct WorkspaceHandler {
     pub key: char,
+}
+
+/// move window to target workspace
+pub struct WindowToWorkspaceHandler {
+    pub key: char,
+}
+
+impl Handler for WindowToWorkspaceHandler {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
+        debug!("handle window move form {} to {}", workspaces.current_name(), self.key);
+        let mut window: Window = 0;
+        let mut revert_to: libc::c_int = 0;
+        unsafe{
+            let s = xlib::XGetInputFocus(display, &mut window, &mut revert_to);
+            println!("window {}", window);
+        }
+
+        let mut root: Window = 0;
+        let mut parent: Window = window;
+        let mut children: *mut Window = ptr::null_mut();
+        let mut nchildren: libc::c_uint = 0;
+
+        // while parent != root {
+            window = parent;
+            unsafe{
+                let s = xlib::XQueryTree(display, window, &mut root, &mut parent, &mut children, &mut nchildren);
+                if s > 0 {
+                    println!("parent {} root {}", parent, root);
+                    xlib::XFree(children as *mut libc::c_void);
+                }
+                else{
+                    println!("error");
+                }
+            }
+        // }
+
+        println!("focused window {}", window);
+        workspaces.current().p();
+        let from = workspaces.current_name();
+        workspaces.move_window(window, from, self.key);
+        workspaces.current().config(display, screen_num);
+
+        match workspaces.get(self.key) {
+            Some(w) => {
+                w.config(display, screen_num);
+            }
+            None => {}
+        }
+
+
+    }
 }
 
 impl Handler for WorkspaceHandler {
