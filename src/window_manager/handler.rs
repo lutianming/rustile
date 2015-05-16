@@ -71,6 +71,29 @@ pub struct WindowToWorkspaceHandler {
     pub key: char,
 }
 
+pub struct WindowFocusHandler {
+    pub direction: layout::Direction,
+}
+
+impl Handler for WindowFocusHandler {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
+        debug!("change focus in current workspace");
+        let mut window: Window = 0;
+        let mut revert_to: libc::c_int = 0;
+        unsafe {
+            let s = xlib::XGetInputFocus(display, &mut window, &mut revert_to);
+            println!("window {}", window);
+            let current = workspaces.current();
+            match current.contain(window) {
+                Some(i) => {
+                    let next = if (i+1) >= current.size() { 0 } else { i+1 };
+                    xlib::XSetInputFocus(display, current.get(next), 0, 0);
+                }
+                None => {}
+            }
+        }
+    }
+}
 impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle window move form {} to {}", workspaces.current_name(), self.key);
