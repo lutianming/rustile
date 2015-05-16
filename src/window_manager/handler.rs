@@ -6,6 +6,7 @@ use std::process::Command;
 use std::boxed::Box;
 
 use x11::xlib;
+use x11::xlib::{ Display, Window };
 use super::WindowManager;
 use super::workspace::Workspaces;
 use super::layout;
@@ -48,7 +49,7 @@ impl KeyBind {
 }
 
 pub trait Handler {
-    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int);
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int);
 }
 
 pub struct ExecHandler {
@@ -65,14 +66,14 @@ pub struct WorkspaceHandler {
 }
 
 impl Handler for WorkspaceHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle workspace");
         workspaces.switch_current(self.key, display);
     }
 }
 
 impl Handler for ExecHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle exec");
         self.cmd.spawn();
     }
@@ -95,6 +96,7 @@ impl LayoutHandler {
         }
     }
 }
+
 impl ExecHandler {
     pub fn new(tokens: &[&str]) -> ExecHandler {
         let (name, args) = tokens.split_at(1);
