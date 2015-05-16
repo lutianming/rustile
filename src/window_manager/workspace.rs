@@ -11,7 +11,7 @@ use super::WindowManager;
 pub struct Workspace {
     root: Window,
     windows: Vec<Window>,
-    pub layout: Box<layout::Layout>
+    layout: Box<layout::Layout>
 }
 
 impl Workspace {
@@ -23,8 +23,17 @@ impl Workspace {
         }
     }
 
+    pub fn p(&self) {
+        for w in self.windows.iter() {
+            println!("{}", w);
+        }
+    }
     pub fn add(&mut self, window: Window) {
-        self.windows.push(window);
+        let index = self.contain(window);
+        match index {
+            Some(i) => {}
+            None => { self.windows.push(window) ;}
+        }
     }
 
     pub fn remove(&mut self, window: Window) {
@@ -33,6 +42,14 @@ impl Workspace {
             Some(i) => { self.windows.remove(i); }
             None => {}
         };
+    }
+
+    pub fn get(&self, index: usize) -> Window{
+        self.windows[index]
+    }
+
+    pub fn size(&self) -> usize {
+        self.windows.len()
     }
 
     pub fn hide(&mut self, display: *mut Display) {
@@ -106,7 +123,7 @@ impl Workspaces {
         self.spaces.get_mut(&key)
     }
 
-    pub fn current(&mut self) -> &mut Workspace{
+    pub fn current(&mut self) -> &mut Workspace {
         self.spaces.get_mut(&self.current).unwrap()
     }
 
@@ -133,6 +150,23 @@ impl Workspaces {
                 Some(v) => {
                     v.show(display);
                 }
+                None => {}
+            }
+        }
+    }
+
+    pub fn move_window(&mut self, window: Window, from: char, to: char){
+        if self.get(to).is_none(){
+            self.create(to);
+        }
+
+        if from != to {
+            match self.get(from) {
+                Some(w) => { w.remove(window); }
+                None => {}
+            }
+            match self.get(to) {
+                Some(w) => { w.add(window); }
                 None => {}
             }
         }
