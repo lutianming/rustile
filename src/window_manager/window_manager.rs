@@ -48,7 +48,7 @@ fn get_text_property(display: *mut xlib::Display, window: xlib::Window, atom: xl
     unsafe{
         let mut prop: xlib::XTextProperty = mem::zeroed();
         let r = xlib::XGetTextProperty(display, window, &mut prop, atom);
-        if r == 0 {
+        if r == 0 || prop.nitems == 0{
             None
         }else{
             let s = String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize + 1 ).clone();
