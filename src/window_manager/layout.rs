@@ -21,7 +21,12 @@ pub trait Layout {
 pub enum Direction {
     Vertical,
     Horizontal,
+    Up,
+    Down,
+    Left,
+    Right,
 }
+
 
 #[derive(PartialEq, Clone)]
 pub enum Type {
@@ -46,6 +51,7 @@ impl Layout for TilingLayout {
         match self.direction {
             Direction::Vertical => self.direction = Direction::Horizontal,
             Direction::Horizontal => self.direction = Direction::Vertical,
+            _ => {}
         }
     }
     /// once we add or remove a window, we need to reconfig
@@ -83,6 +89,7 @@ impl Layout for TilingLayout {
                         change.x = width * i as libc::c_int;
                         change.width = width;
                     }
+                    _ => {}
                 };
 
                 debug!("config x: {}, y: {}, width: {}, height: {}",
