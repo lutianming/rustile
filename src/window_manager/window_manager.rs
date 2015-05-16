@@ -51,7 +51,7 @@ fn get_text_property(display: *mut xlib::Display, window: xlib::Window, atom: xl
         if r == 0 || prop.nitems == 0{
             None
         }else{
-            let s = String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize + 1 ).clone();
+            let s = String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize).clone();
             let text = Some(s);
             xlib::XFree(prop.value as *mut libc::c_void);
             text
@@ -87,7 +87,7 @@ fn get_window_property(display: *mut xlib::Display, window: xlib::Window, atom: 
                 // let s = from_raw_parts(prop_return as *const libc::c_ulong, nitems_return as usize).iter()
                 //     .map(|&c| c as u64)
                 //     .collect();
-                let s = String::from_raw_parts(prop_return, nitem_return as usize, nitem_return as usize + 1 );
+                let s = String::from_raw_parts(prop_return, nitem_return as usize, nitem_return as usize);
                 println!("{}", s);
 
             }
