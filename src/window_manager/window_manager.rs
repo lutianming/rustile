@@ -113,7 +113,7 @@ impl WindowManager {
             }
 	    let screen_num  = xlib::XDefaultScreen(display);
 	    let root    = xlib::XRootWindow(display, screen_num);
-
+            println!("root window {}", root);
 	    let mut wm = WindowManager {
 	        display: display,
                 screen_num: screen_num,
@@ -156,19 +156,9 @@ impl WindowManager {
 
                         // change attributes before display
                         let mut attrs: xlib::XSetWindowAttributes = mem::zeroed();
-                        attrs.event_mask = xlib::KeyReleaseMask;
+                        attrs.event_mask = xlib::KeyReleaseMask | xlib::FocusChangeMask | xlib::EnterWindowMask;
                         let valuemask = xlib::CWEventMask;
                         xlib::XChangeWindowAttributes(self.display, event.window, valuemask, &mut attrs);
-
-                        // add to workspace
-                        // let mut w = self.workspaces.get_mut(&'1');
-                        // match w {
-                        //     Some(workspace) => {
-                        //         workspace.add(event.window);
-                        //         workspace.config(self);
-                        //     }
-                        //     None => {}
-                        // }
 
                         // get window property
                         let n = get_text_property(self.display, event.window, xlib::XA_WM_NAME);
@@ -219,7 +209,6 @@ impl WindowManager {
                                 workspace.config(self.display, self.screen_num);
                             }
                         }
-
                     }
                     xlib::ClientMessage => {
                         debug!("client message");
@@ -234,7 +223,7 @@ impl WindowManager {
                         match event.format {
                             8 => {
                                 for i in 0..20 {
-                                    println!("{}", event.data.get_byte(i))
+                                    println!("{}", event.data.get_byte(i));
                                 }
                             }
                             16 => {
@@ -285,21 +274,46 @@ impl WindowManager {
                         debug!("configure notify");
                     }
                     xlib::ConfigureRequest =>{
-                        debug!("configure request");
-                        // let mut change = xlib::XWindowChanges {
-                        //     x: event.x,
-                        //     y: event.y,
-                        //     width: event.width,
-                        //     height: event.height,
-                        //     border_width: event.border_width,
-                        //     sibling: event.above,
-                        //     stack_mode: event.detail
-                        // };
-                        // debug!("config x: {}, y: {}, width: {}, height: {}",
-                        //        change.x, change.y, change.width, change.height);
                         let mut event: xlib::XConfigureRequestEvent = From::from(e);
+                        debug!("configure request {}", event.window);
+
+                        let mut change = xlib::XWindowChanges {
+                            x: event.x,
+                            y: event.y,
+                            width: event.width,
+                            height: event.height,
+                            border_width: event.border_width,
+                            sibling: event.above,
+                            stack_mode: event.detail
+                        };
+                        debug!("config x: {}, y: {}, width: {}, height: {}",
+                               change.x, change.y, change.width, change.height);
                         // xlib::XConfigureWindow(event.display, event.window, event.value_mask as u32, &mut change);
 
+                    }
+                    xlib::FocusIn => {
+                        let mut event: xlib::XFocusChangeEvent = From::from(e);
+                        debug!("focus in {}", event.window);
+
+                        let mut window: xlib::Window = 0;
+                        let mut revert_to: libc::c_int = 0;
+                        unsafe{
+                            xlib::XSetInputFocus(self.display, event.window, 0, 0);
+
+                            let s = xlib::XGetInputFocus(self.display, &mut window, &mut revert_to);
+                            println!("window {}", window);
+                        }
+                    }
+                    xlib::FocusOut => {
+                        let mut event: xlib::XFocusChangeEvent = From::from(e);
+                        debug!("focus out {}", event.window);
+                    }
+                    xlib::EnterNotify => {
+                        let mut event: xlib::XCrossingEvent = From::from(e);
+                        debug!("enter window {}", event.window);
+                        if event.focus == 0 {
+                            xlib::XSetInputFocus(self.display, event.window, 0, 0);
+                        }
                     }
                     _ => {
                         debug!("unhandled event {}", t);
