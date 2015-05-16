@@ -14,7 +14,7 @@ use std::boxed::Box;
 
 use super::layout;
 use super::handler::{ KeyBind, Handler };
-use super::handler::{ ExecHandler, LayoutHandler, WorkspaceHandler };
+use super::handler::{ ExecHandler, LayoutHandler, WorkspaceHandler, WindowToWorkspaceHandler, WindowFocusHandler };
 
 
 pub struct Config {
@@ -121,10 +121,12 @@ impl Config {
         let (name, args) = cmd.split_at(1);
         match name[0] {
             "exec" => {
+                println!("exec");
                 let handler = ExecHandler::new(args);
                 self.bindsyms.insert(bind, Box::new(handler));
             }
             "layout" => {
+                println!("layout");
                 let layout = args[0];
                 match layout {
                     "split" => {
@@ -135,6 +137,7 @@ impl Config {
                 }
             }
             "workspace" => {
+                println!("workspace");
                 let c = args[0].chars().nth(0);
                 match c {
                     Some(v) => {
@@ -145,7 +148,32 @@ impl Config {
                     }
                     None => {}
                 }
-
+            }
+            "window" => {
+                let c = args[0].chars().nth(0);
+                match c {
+                    Some(v) => {
+                        println!("window");
+                        let handler = WindowToWorkspaceHandler {
+                            key: v,
+                        };
+                        self.bindsyms.insert(bind, Box::new(handler));
+                    }
+                    None => {}
+                }
+            }
+            "focus" => {
+                let direction = match args[0] {
+                    "left" => layout::Direction::Left,
+                    "right" => layout::Direction::Right,
+                    "up" => layout::Direction::Up,
+                    "down" => layout::Direction::Down,
+                    _ => layout::Direction::Right
+                };
+                let handler = WindowFocusHandler {
+                    direction: direction
+                };
+                self.bindsyms.insert(bind, Box::new(handler));
             }
             _ => {}
         }
