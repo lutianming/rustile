@@ -10,6 +10,7 @@ fn main() {
     env_logger::init().unwrap();
 
     let mut wm = WindowManager::new();
+    wm.init();
     wm.run();
 
     wm.clean();
