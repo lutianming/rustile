@@ -11,7 +11,7 @@ use std::boxed::Box;
 
 use x11::xlib;
 use x11::xlib::{ Display, Window };
-use libc::{ c_int, c_ulong, c_void };
+use libc::{ c_int, c_long, c_ulong, c_void };
 
 
 pub fn open_display(name: Option<&str>) -> Option<*mut Display> {
@@ -36,6 +36,12 @@ pub fn open_display(name: Option<&str>) -> Option<*mut Display> {
     }
 }
 
+pub fn close_display(display: *mut Display) {
+    unsafe{
+        xlib::XCloseDisplay(display);
+    }
+}
+
 pub fn default_screen(display: *mut Display) -> c_int {
     unsafe{
         xlib::XDefaultScreen(display)
@@ -45,6 +51,14 @@ pub fn default_screen(display: *mut Display) -> c_int {
 pub fn root_window(display: *mut Display, screen_num: c_int) -> c_ulong {
     unsafe {
         xlib::XRootWindow(display, screen_num)
+    }
+}
+
+pub fn next_event(display: *mut Display) -> xlib::XEvent {
+    unsafe{
+        let mut e: xlib::XEvent = mem::zeroed();
+        xlib::XNextEvent(display, &mut e);
+        e
     }
 }
 
@@ -115,6 +129,13 @@ pub fn get_window_attributes(display: *mut Display, window: Window) -> xlib::XWi
     }
 }
 
+pub fn get_transient_for_hint(display: *mut Display, window: Window) -> i32 {
+    unsafe{
+        let mut window_return: xlib::Window = 0;
+        xlib::XGetTransientForHint(display, window, &mut window_return)
+    }
+}
+
 pub fn change_window_attributes(display: *mut Display, window: Window, valuemask: c_ulong, attrs: *mut xlib::XSetWindowAttributes) {
     unsafe{
         xlib::XChangeWindowAttributes(display, window, valuemask, attrs);
@@ -157,6 +178,49 @@ fn get_window_property(display: *mut xlib::Display, window: Window, atom: xlib::
     }
 }
 
+pub fn set_input_focus(display: *mut Display, window: Window, revert_to: c_int, time: xlib::Time) {
+    unsafe{
+        xlib::XSetInputFocus(display, window, revert_to, time);
+    }
+}
+
+pub fn get_input_focus(display: *mut Display) -> (Window, c_int){
+    let mut window: xlib::Window = 0;
+    let mut revert_to: libc::c_int = 0;
+    unsafe{
+        let s = xlib::XGetInputFocus(display, &mut window, &mut revert_to);
+    }
+    (window, revert_to)
+}
+
+pub fn unmap_window(display: *mut Display, window: Window) -> c_int{
+    unsafe{
+        xlib::XUnmapWindow(display, window)
+    }
+
+}
+
+pub fn map_window(display: *mut Display, window: Window) -> c_int{
+    unsafe{
+        xlib::XMapWindow(display, window)
+    }
+}
+
+pub fn send_event(display: *mut Display, window: Window,
+                  propagate: c_int, event_mask: c_long,
+                  mut event: xlib::XEvent) {
+    unsafe{
+        xlib::XSendEvent(display, window, propagate, event_mask, &mut event);
+    }
+}
+
+pub fn string_to_keysym(s: &str) -> xlib::KeySym {
+    let tmp = ffi::CString::new(s).unwrap();
+    unsafe{
+        xlib::XStringToKeysym(tmp.as_ptr())
+    }
+
+}
 
 #[cfg(test)]
 mod test{

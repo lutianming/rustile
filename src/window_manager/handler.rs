@@ -35,10 +35,7 @@ impl KeyBind {
                 "Mod4" => mask = mask | xlib::Mod4Mask,
                 "Mod5" => mask = mask | xlib::Mod5Mask,
                 _ => {
-                    let tmp = ffi::CString::new(*key).unwrap();
-                    unsafe{
-                        sym = xlib::XStringToKeysym(tmp.as_ptr());
-                    }
+                    sym = libx::string_to_keysym(key);
                 }
             }
         }
@@ -82,85 +79,76 @@ pub struct WindowCloseHandler;
 impl Handler for WindowCloseHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle window close");
-        let mut window: Window = 0;
-        let mut revert_to: libc::c_int = 0;
-        unsafe{
-            let s = xlib::XGetInputFocus(display, &mut window, &mut revert_to);
+        let (window, _) = libx::get_input_focus(display);
+        let mut event: xlib::XClientMessageEvent = unsafe {
+            mem::zeroed()
+        };
+        let wm_delete_window = libx::get_atom(display, "WM_DELETE_WINDOW");
+        let wm_protocols = libx::get_atom(display, "WM_PROTOCOLS");
 
-            let mut event: xlib::XClientMessageEvent = mem::zeroed();
+        println!("wm delete window {}", wm_delete_window);
+        println!("protocols {}", wm_protocols);
 
-            let wm_delete_window = libx::get_atom(display, "WM_DELETE_WINDOW");
-            let wm_protocols = libx::get_atom(display, "WM_PROTOCOLS");
+        event.type_ = xlib::ClientMessage;
+        event.message_type = wm_protocols;
+        event.format = 32;
+        event.window = window;
+        event.send_event = xlib::True;
+        event.display = display;
+        event.data.set_long(0, wm_delete_window as libc::c_long);
 
-            println!("wm delete window {}", wm_delete_window);
-            println!("protocols {}", wm_protocols);
+        let mut e: xlib::XEvent = From::from(event);
+        libx::send_event(display, window, xlib::True, xlib::NoEventMask, e);
 
-            event.type_ = xlib::ClientMessage;
-            event.message_type = wm_protocols;
-            event.format = 32;
-            event.window = window;
-            event.send_event = xlib::True;
-            event.display = display;
-            event.data.set_long(0, wm_delete_window as libc::c_long);
-
-            let mut e: xlib::XEvent = From::from(event);
-            xlib::XSendEvent(display, window, xlib::True, xlib::NoEventMask, &mut e);
-
-            // xlib::XWithdrawWindow(display, window, screen_num);
-            // xlib::XDestroyWindow(display, window);
-            println!("destroy {}", window);
-        }
+        // xlib::XWithdrawWindow(display, window, screen_num);
+        // xlib::XDestroyWindow(display, window);
+        println!("destroy {}", window);
 
     }
 }
 impl Handler for WindowFocusHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("change focus in current workspace");
-        let mut window: Window = 0;
-        let mut revert_to: libc::c_int = 0;
-        unsafe {
-            let s = xlib::XGetInputFocus(display, &mut window, &mut revert_to);
-            println!("window {}", window);
-            let current = workspaces.current();
-            match current.contain(window) {
-                Some(i) => {
-                    let next = if (i+1) >= current.size() { 0 } else { i+1 };
-                    xlib::XSetInputFocus(display, current.get(next), 0, 0);
-                }
-                None => {}
+        let (window, _) = libx::get_input_focus(display);
+
+        println!("window {}", window);
+        let current = workspaces.current();
+        match current.contain(window) {
+            Some(i) => {
+                let next = if (i+1) >= current.size() { 0 } else { i+1 };
+                libx::set_input_focus(display, current.get(next), 0, 0);
             }
+            None => {}
         }
+
     }
 }
 
 impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle window move form {} to {}", workspaces.current_name(), self.key);
-        let mut window: Window = 0;
-        let mut revert_to: libc::c_int = 0;
-        unsafe{
-            let s = xlib::XGetInputFocus(display, &mut window, &mut revert_to);
-            println!("window {}", window);
-        }
+
+        let (window, _) = libx::get_input_focus(display);
+        println!("window {}", window);
 
         let mut root: Window = 0;
         let mut parent: Window = window;
         let mut children: *mut Window = ptr::null_mut();
         let mut nchildren: libc::c_uint = 0;
 
-        while parent != root {
-            window = parent;
-            unsafe{
-                let s = xlib::XQueryTree(display, window, &mut root, &mut parent, &mut children, &mut nchildren);
-                if s > 0 {
-                    println!("parent {} root {}", parent, root);
-                    xlib::XFree(children as *mut libc::c_void);
-                }
-                else{
-                    println!("error");
-                }
-            }
-        }
+        // while parent != root {
+        //     window = parent;
+        //     unsafe{
+        //         let s = xlib::XQueryTree(display, window, &mut root, &mut parent, &mut children, &mut nchildren);
+        //         if s > 0 {
+        //             println!("parent {} root {}", parent, root);
+        //             xlib::XFree(children as *mut libc::c_void);
+        //         }
+        //         else{
+        //             println!("error");
+        //         }
+        //     }
+        // }
 
         println!("focused window {}", window);
         workspaces.current().p();
@@ -195,7 +183,7 @@ impl Handler for ExecHandler {
 }
 
 impl Handler for LayoutHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut xlib::Display, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle layout");
         let current = workspaces.current();
         let t = self.layout_type.clone();

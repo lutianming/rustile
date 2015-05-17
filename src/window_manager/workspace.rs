@@ -54,17 +54,13 @@ impl Workspace {
 
     pub fn hide(&mut self, display: *mut Display) {
         for w in self.windows.iter() {
-            unsafe{
-                xlib::XUnmapWindow(display, *w);
-            }
+            libx::unmap_window(display, *w);
         }
     }
 
     pub fn show(&mut self, display: *mut Display) {
         for w in self.windows.iter() {
-            unsafe{
-                xlib::XMapWindow(display, *w);
-            }
+            libx::map_window(display, *w);
         }
     }
 

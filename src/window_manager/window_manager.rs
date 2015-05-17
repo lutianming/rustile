@@ -64,10 +64,7 @@ impl WindowManager {
     }
 
     pub fn clean(&mut self) {
-        unsafe{
-            xlib::XCloseDisplay(self.display);
-        }
-
+        libx::close_display(self.display);
     }
 
     pub fn handle_create(&mut self, event: &xlib::XCreateWindowEvent) {
@@ -117,11 +114,9 @@ impl WindowManager {
 
             // add app top-level window to workspace
 
-            let mut attrs: xlib::XWindowAttributes = mem::zeroed();
-            xlib::XGetWindowAttributes(self.display, event.window, &mut attrs);
+            let attrs = libx::get_window_attributes(self.display, event.window);
+            let transientfor_hint = libx::get_transient_for_hint(self.display, event.window);
 
-            let mut window_return: xlib::Window = 0;
-            let transientfor_hint = xlib::XGetTransientForHint(self.display, event.window, &mut window_return);
             println!("trans hint {}", transientfor_hint);
             if attrs.override_redirect == 0 && transientfor_hint == 0 {
                 debug!("top level window");
@@ -217,21 +212,15 @@ impl WindowManager {
     }
 
     pub fn handle_focus_in(&mut self, event: &xlib::XFocusChangeEvent) {
-        let mut window: xlib::Window = 0;
-        let mut revert_to: libc::c_int = 0;
-        unsafe{
-            xlib::XSetInputFocus(self.display, event.window, 0, 0);
-
-            let s = xlib::XGetInputFocus(self.display, &mut window, &mut revert_to);
-            println!("window {}", window);
-        }
-    }
+        libx::set_input_focus(self.display, event.window, 0, 0);
+        let (window, _) = libx::get_input_focus(self.display);
+        println!("window {}", window);
+      }
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
-        unsafe{
-            println!("set focus");
-            xlib::XSetInputFocus(self.display, event.window, 0, 0);
-        }
+        println!("set focus");
+        libx::set_input_focus(self.display, event.window, 0, 0);
+
         // if event.focus == 0 {
         // }
     }
@@ -303,6 +292,16 @@ impl WindowManager {
         }
     }
     pub fn run(&mut self) {
+        loop {
+            //handle events here
+            unsafe {
+                let mut e = libx::next_event(self.display);
+                self.handle(e);
+            }
+        }
+    }
+
+    pub fn init(&mut self) {
         let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask;
         let keymask = xlib::KeyPressMask | xlib::KeyReleaseMask;
         unsafe{
@@ -310,15 +309,6 @@ impl WindowManager {
             xlib::XSelectInput(self.display, self.root,
                                mask | keymask);
             xlib::XSync(self.display, 0);
-        }
-
-        loop {
-            //handle events here
-            unsafe {
-                let mut e: xlib::XEvent = mem::zeroed();
-                xlib::XNextEvent(self.display, &mut e);
-                self.handle(e);
-            }
         }
     }
 }
