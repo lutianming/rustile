@@ -1,8 +1,6 @@
 extern crate x11;
 extern crate libc;
 
-use std::ffi;
-use std::mem;
 use std::ptr;
 use std::process::Command;
 use std::boxed::Box;
@@ -80,29 +78,10 @@ impl Handler for WindowCloseHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle window close");
         let (window, _) = libx::get_input_focus(display);
-        let mut event: xlib::XClientMessageEvent = unsafe {
-            mem::zeroed()
-        };
-        let wm_delete_window = libx::get_atom(display, "WM_DELETE_WINDOW");
-        let wm_protocols = libx::get_atom(display, "WM_PROTOCOLS");
-
-        println!("wm delete window {}", wm_delete_window);
-        println!("protocols {}", wm_protocols);
-
-        event.type_ = xlib::ClientMessage;
-        event.message_type = wm_protocols;
-        event.format = 32;
-        event.window = window;
-        event.send_event = xlib::True;
-        event.display = display;
-        event.data.set_long(0, wm_delete_window as libc::c_long);
-
-        let mut e: xlib::XEvent = From::from(event);
-        libx::send_event(display, window, xlib::True, xlib::NoEventMask, e);
-
+        libx::kill_window(display, window);
         // xlib::XWithdrawWindow(display, window, screen_num);
         // xlib::XDestroyWindow(display, window);
-        println!("destroy {}", window);
+        println!("try kill window {}", window);
 
     }
 }
@@ -116,7 +95,7 @@ impl Handler for WindowFocusHandler {
         match current.contain(window) {
             Some(i) => {
                 let next = if (i+1) >= current.size() { 0 } else { i+1 };
-                libx::set_input_focus(display, current.get(next), 0, 0);
+                libx::set_input_focus(display, current.get(next));
             }
             None => {}
         }

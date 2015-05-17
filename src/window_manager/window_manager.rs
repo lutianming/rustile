@@ -207,12 +207,11 @@ impl WindowManager {
         };
         debug!("config x: {}, y: {}, width: {}, height: {}",
                change.x, change.y, change.width, change.height);
-        // xlib::XConfigureWindow(event.display, event.window, event.value_mask as u32, &mut change);
-
+        libx::configure_window(event.display, event.window, event.value_mask as u32, change);
     }
 
     pub fn handle_focus_in(&mut self, event: &xlib::XFocusChangeEvent) {
-        libx::set_input_focus(self.display, event.window, 0, 0);
+        libx::set_input_focus(self.display, event.window);
         let (window, _) = libx::get_input_focus(self.display);
         println!("window {}", window);
       }
