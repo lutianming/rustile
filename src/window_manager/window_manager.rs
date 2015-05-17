@@ -218,10 +218,10 @@ impl WindowManager {
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
         println!("set focus");
-        libx::set_input_focus(self.display, event.window, 0, 0);
-
-        // if event.focus == 0 {
-        // }
+        println!("is focused {}", event.focus);
+        if event.focus == 0 {
+            libx::set_input_focus(self.display, event.window);
+        }
     }
 
     pub fn handle(&mut self, e: xlib::XEvent) {
