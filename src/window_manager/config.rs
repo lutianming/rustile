@@ -175,8 +175,12 @@ impl Config {
                 };
                 self.bindsyms.insert(bind, Box::new(handler));
             }
+            "kill" => {
+                let handler = WindowCloseHandler;
+                self.bindsyms.insert(bind, Box::new(handler));
+            }
             _ => {}
-        }
+        };
     }
 
     fn set_var(&mut self, key: &str, val: &str) {
