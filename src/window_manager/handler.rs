@@ -2,15 +2,17 @@ extern crate x11;
 extern crate libc;
 
 use std::ffi;
+use std::mem;
+use std::ptr;
 use std::process::Command;
 use std::boxed::Box;
-use std::ptr;
 
 use x11::xlib;
 use x11::xlib::{ Display, Window };
 use super::WindowManager;
 use super::workspace::Workspaces;
 use super::layout;
+use super::super::libx;
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 pub struct KeyBind {
@@ -75,6 +77,42 @@ pub struct WindowFocusHandler {
     pub direction: layout::Direction,
 }
 
+pub struct WindowCloseHandler;
+
+impl Handler for WindowCloseHandler {
+    fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
+        debug!("handle window close");
+        let mut window: Window = 0;
+        let mut revert_to: libc::c_int = 0;
+        unsafe{
+            let s = xlib::XGetInputFocus(display, &mut window, &mut revert_to);
+
+            let mut event: xlib::XClientMessageEvent = mem::zeroed();
+
+            let wm_delete_window = libx::get_atom(display, "WM_DELETE_WINDOW");
+            let wm_protocols = libx::get_atom(display, "WM_PROTOCOLS");
+
+            println!("wm delete window {}", wm_delete_window);
+            println!("protocols {}", wm_protocols);
+
+            event.type_ = xlib::ClientMessage;
+            event.message_type = wm_protocols;
+            event.format = 32;
+            event.window = window;
+            event.send_event = xlib::True;
+            event.display = display;
+            event.data.set_long(0, wm_delete_window as libc::c_long);
+
+            let mut e: xlib::XEvent = From::from(event);
+            xlib::XSendEvent(display, window, xlib::True, xlib::NoEventMask, &mut e);
+
+            // xlib::XWithdrawWindow(display, window, screen_num);
+            // xlib::XDestroyWindow(display, window);
+            println!("destroy {}", window);
+        }
+
+    }
+}
 impl Handler for WindowFocusHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("change focus in current workspace");
@@ -94,6 +132,7 @@ impl Handler for WindowFocusHandler {
         }
     }
 }
+
 impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle window move form {} to {}", workspaces.current_name(), self.key);
@@ -109,7 +148,7 @@ impl Handler for WindowToWorkspaceHandler {
         let mut children: *mut Window = ptr::null_mut();
         let mut nchildren: libc::c_uint = 0;
 
-        // while parent != root {
+        while parent != root {
             window = parent;
             unsafe{
                 let s = xlib::XQueryTree(display, window, &mut root, &mut parent, &mut children, &mut nchildren);
@@ -121,7 +160,7 @@ impl Handler for WindowToWorkspaceHandler {
                     println!("error");
                 }
             }
-        // }
+        }
 
         println!("focused window {}", window);
         workspaces.current().p();
@@ -144,6 +183,7 @@ impl Handler for WorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, display: *mut Display, screen_num: libc::c_int) {
         debug!("handle workspace");
         workspaces.switch_current(self.key, display);
+
     }
 }
 
