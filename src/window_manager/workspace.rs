@@ -1,15 +1,16 @@
 extern crate libc;
 
-use x11::xlib;
 use x11::xlib::{ Window, Display };
 
 use std::boxed::Box;
 use std::collections::HashMap;
 use super::layout;
 use super::WindowManager;
+use super::super::libx;
 
 pub struct Workspace {
     root: Window,
+    focus: Window,
     windows: Vec<Window>,
     layout: Box<layout::Layout>
 }
@@ -18,6 +19,7 @@ impl Workspace {
     pub fn new() -> Workspace {
         Workspace {
             root: 0,
+            focus: 0,
             windows: Vec::new(),
             layout: Box::new(layout::TilingLayout::new(layout::Direction::Horizontal))
         }
@@ -28,6 +30,7 @@ impl Workspace {
             println!("{}", w);
         }
     }
+
     pub fn add(&mut self, window: Window) {
         let index = self.contain(window);
         match index {
@@ -83,7 +86,7 @@ impl Workspace {
         }
     }
 
-    pub fn config(&self, display: *mut xlib::Display, screen_num: libc::c_int) {
+    pub fn config(&self, display: *mut Display, screen_num: libc::c_int) {
         debug!("size {}", self.windows.len());
         self.layout.configure(&self.windows, display, screen_num);
     }
