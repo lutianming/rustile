@@ -7,11 +7,12 @@ use std::ptr;
 use std::ffi;
 use std::mem;
 use std::str;
+use std::slice;
 use std::boxed::Box;
 
 use x11::xlib;
 use x11::xlib::{ Display, Window };
-use libc::{ c_int, c_long, c_ulong, c_void };
+use libc::{ c_int, c_long, c_uint, c_ulong, c_void };
 
 
 pub fn open_display(name: Option<&str>) -> Option<*mut Display> {
@@ -96,10 +97,16 @@ pub fn get_text_property(display: *mut Display, window: xlib::Window, atom: xlib
         if r == 0 || prop.nitems == 0{
             None
         }else{
-            let s = String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize).clone();
-            let text = Some(s);
-            xlib::XFree(prop.value as *mut libc::c_void);
-            text
+
+            // let s = String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize).clone()
+            let s = slice::from_raw_parts(prop.value, prop.nitems as usize).iter().map(|&c| c as u8).collect();
+            match String::from_utf8(s) {
+                Ok(v) => {
+                    xlib::XFree(prop.value as *mut libc::c_void);
+                    Some(v)
+                }
+                _ => None
+            }
         }
     }
 }
@@ -111,11 +118,9 @@ pub fn get_wm_protocols(display: *mut Display, window: Window) -> Vec<xlib::Atom
         let s = xlib::XGetWMProtocols(display, window, &mut atoms, &mut count);
         let mut vec: Vec<xlib::Atom> = Vec::new();
         if s > 0 {
-            println!("protocols {}", count);
-            for i in 0..count {
-                vec = Vec::from_raw_parts(atoms, count as usize, count as usize).clone();
-            }
-            // xlib::XFree(atoms as *mut c_void);
+            vec = slice::from_raw_parts(atoms, count as usize).iter()
+                .map(|&a| a as xlib::Atom).collect();
+            xlib::XFree(atoms as *mut c_void);
         }
         vec
     }
@@ -142,6 +147,7 @@ pub fn change_window_attributes(display: *mut Display, window: Window, valuemask
     }
 
 }
+
 fn get_window_property(display: *mut xlib::Display, window: Window, atom: xlib::Atom) {
     unsafe {
         let mut actual_type_return: u64 = 0;
@@ -178,9 +184,12 @@ fn get_window_property(display: *mut xlib::Display, window: Window, atom: xlib::
     }
 }
 
-pub fn set_input_focus(display: *mut Display, window: Window, revert_to: c_int, time: xlib::Time) {
+pub fn set_input_focus(display: *mut Display, window: Window) {
+    let none = 0;
+    let pointer_root = 1;
+    let parent = 2;
     unsafe{
-        xlib::XSetInputFocus(display, window, revert_to, time);
+        xlib::XSetInputFocus(display, window, pointer_root, 0);
     }
 }
 
@@ -200,10 +209,44 @@ pub fn unmap_window(display: *mut Display, window: Window) -> c_int{
 
 }
 
+pub fn configure_window(display: *mut Display, window: Window, mask:c_uint, mut change: xlib::XWindowChanges) {
+    unsafe{
+        xlib::XConfigureWindow(display, window, mask, &mut change);
+    }
+}
 pub fn map_window(display: *mut Display, window: Window) -> c_int{
     unsafe{
         xlib::XMapWindow(display, window)
     }
+}
+
+pub fn kill_window(display: *mut Display, window: Window) {
+    let mut event: xlib::XClientMessageEvent = unsafe {
+        mem::zeroed()
+    };
+
+    let wm_delete_window = get_atom(display, "WM_DELETE_WINDOW");
+    let wm_protocols = get_atom(display, "WM_PROTOCOLS");
+    let protocols = get_wm_protocols(display, window);
+
+    if protocols.iter().any(|&p| p == wm_delete_window){
+        event.type_ = xlib::ClientMessage;
+        event.message_type = wm_protocols;
+        event.format = 32;
+        event.window = window;
+        event.send_event = xlib::True;
+        event.display = display;
+        event.data.set_long(0, wm_delete_window as libc::c_long);
+
+        let mut e: xlib::XEvent = From::from(event);
+        send_event(display, window, xlib::True, xlib::NoEventMask, e);
+    }
+    else{
+        unsafe{
+            xlib::XKillClient(display, window);
+        }
+    }
+
 }
 
 pub fn send_event(display: *mut Display, window: Window,
