@@ -13,29 +13,20 @@ use x11::xlib;
 use std::boxed::Box;
 
 use super::layout;
-use super::handler::{ KeyBind, Handler };
-use super::handler::{ ExecHandler, LayoutHandler, WorkspaceHandler, WindowToWorkspaceHandler, WindowFocusHandler };
+use super::handler::{
+    KeyBind,
+    Handler,
+    ExecHandler,
+    LayoutHandler,
+    WorkspaceHandler,
+    WindowToWorkspaceHandler,
+    WindowFocusHandler,
+    WindowCloseHandler};
 
 
 pub struct Config {
     mod_key: u32,
     pub bindsyms: HashMap<KeyBind, Box<Handler>>,
-}
-
-#[test]
-fn test_map() {
-    let mut bindsyms: HashMap<KeyBind, i32> = HashMap::new();
-    let b = KeyBind {
-        key: 0,
-        mask: 0
-    };
-    bindsyms.insert(b, 1);
-
-    let c = KeyBind {
-        key: 0,
-        mask: 0
-    };
-    assert!(bindsyms.contains_key(&c), true);
 }
 
 impl Config {
@@ -94,7 +85,6 @@ impl Config {
             match cmd[0] {
                 "set" => {
                     if args.len() > 1 {
-                        debug!("set var");
                         self.set_var(args[0], args[1]);
                     }
                 }
@@ -200,4 +190,21 @@ impl Config {
             _ => {}
         }
     }
+}
+
+
+#[test]
+fn test_map() {
+    let mut bindsyms: HashMap<KeyBind, i32> = HashMap::new();
+    let b = KeyBind {
+        key: 0,
+        mask: 0
+    };
+    bindsyms.insert(b, 1);
+
+    let c = KeyBind {
+        key: 0,
+        mask: 0
+    };
+    assert!(bindsyms.contains_key(&c), true);
 }
