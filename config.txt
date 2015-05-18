@@ -1,0 +1,16 @@
+set $mod Mod4
+
+bind $mod+c exec dmenu_run
+bind $mod+b layout split
+
+bind $mod+1 workspace 1
+bind $mod+2 workspace 2
+
+bind $mod+3 window 1
+bind $mod+4 window 2
+
+bind $mod+5 focus left
+bind $mod+6 focus right
+
+bind $mod+7 kill
+exec pwd
