@@ -62,41 +62,39 @@ impl Layout for TilingLayout {
         if size == 0 {
             return;
         }
+        let screen_height = libx::display_height(context, screen_num);
+        let screen_width = libx::display_width(context, screen_num);
 
-        unsafe {
-            let screen_height = libx::display_height(context, screen_num);
-            let screen_width = libx::display_height(context, screen_num);
-            let mask = CWX | CWY | CWHeight | CWWidth;
+        let mask = CWX | CWY | CWHeight | CWWidth;
 
-            let width = screen_width  / size as libc::c_int;
-            let height = screen_height / size as libc::c_int;
+        let width = screen_width  / size as libc::c_int;
+        let height = screen_height / size as libc::c_int;
+        println!("screen width {} height {}", width, height);
+        for (i, w) in windows.iter().enumerate() {
+            let mut change = xlib::XWindowChanges {
+                x: 0,
+                y: 0,
+                width: screen_width,
+                height: screen_height,
+                border_width: 0,
+                sibling: 0,
+                stack_mode: 0
+            };
+            match self.direction {
+                Direction::Vertical => {
+                    change.y = height * i as libc::c_int;
+                    change.height = height;
+                }
+                Direction::Horizontal => {
+                    change.x = width * i as libc::c_int;
+                    change.width = width;
+                }
+                _ => {}
+            };
 
-            for (i, w) in windows.iter().enumerate() {
-                let mut change = xlib::XWindowChanges {
-                    x: 0,
-                    y: 0,
-                    width: screen_width,
-                    height: screen_height,
-                    border_width: 0,
-                    sibling: 0,
-                    stack_mode: 0
-                };
-                match self.direction {
-                    Direction::Vertical => {
-                        change.y = height * i as libc::c_int;
-                        change.height = height;
-                    }
-                    Direction::Horizontal => {
-                        change.x = width * i as libc::c_int;
-                        change.width = width;
-                    }
-                    _ => {}
-                };
-
-                debug!("config x: {}, y: {}, width: {}, height: {}",
-                       change.x, change.y, change.width, change.height);
-                libx::configure_window(context, *w, mask, change);
-            }
+            debug!("config window {} x: {}, y: {}, width: {}, height: {}",
+                   *w, change.x, change.y, change.width, change.height);
+            libx::configure_window(context, *w, mask, change);
         }
     }
 }
