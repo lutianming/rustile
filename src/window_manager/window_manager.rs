@@ -60,6 +60,8 @@ impl WindowManager {
             workspaces: Workspaces::new()
         };
         wm.workspaces.create('1', screen_num);
+        wm.workspaces.get('1').unwrap().visible = true;
+        wm.workspaces.switch_current('1', context);
         wm
     }
 
@@ -99,16 +101,7 @@ impl WindowManager {
     }
 
     pub fn handle_destroy(&mut self, event: &xlib::XDestroyWindowEvent) {
-        let workspace = self.workspaces.current();
-        println!("current windows {}", workspace.size());
-        match workspace.contain(event.window) {
-            Some(index) => {
-                println!("in workspace");
-                workspace.remove(event.window);
-                workspace.config(self.context);
-            }
-            None => { println!("not in workspace"); }
-        }
+        self.workspaces.remove_window(event.window, self.context);
     }
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
@@ -116,13 +109,10 @@ impl WindowManager {
 
         // add app top-level window to workspace
         let manage = self.is_top_window(event.window);
+
         if manage {
             debug!("top level window");
-            let mut workspace = self.workspaces.current();
-            if workspace.contain(event.window).is_none() {
-                workspace.add(event.window);
-                workspace.config(self.context);
-            }
+            self.workspaces.add_window(event.window, None, self.context);
 
             libx::set_input_focus(self.context, event.window);
 
