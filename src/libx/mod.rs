@@ -191,6 +191,60 @@ fn get_window_property(context: Context, window: Window, atom: xlib::Atom) {
     }
 }
 
+pub fn get_top_window(context: Context, window: Window)-> Option<Window>{
+    let mut w = window;
+    let mut root = window;
+    let mut parent = window;
+    unsafe{
+        while parent != root {
+            w = parent;
+            unsafe{
+                let res = query_tree(context, w);
+                match res {
+                    Some((r, p, _)) => {
+                        parent = p;
+                        root = r;
+                    }
+                    None => {
+                        return None
+                    }
+                }
+            }
+        }
+        Some(w)
+    }
+}
+
+pub fn get_children(context: Context, window: Window) -> Option<Vec<Window>> {
+    let res = query_tree(context, window);
+    match res {
+        Some((_, _, v)) => {
+            Some(v)
+        }
+        None => { None }
+    }
+}
+
+pub fn query_tree(context: Context, window: Window) -> Option<(Window, Window, Vec<Window>)> {
+    let mut root: Window = 0;
+    let mut parent: Window = window;
+    let mut children: *mut Window = ptr::null_mut();
+    let mut nchildren: libc::c_uint = 0;
+    unsafe{
+        let s = xlib::XQueryTree(context.display, window, &mut root, &mut parent, &mut children, &mut nchildren);
+        if s > 0 {
+            let vec = slice::from_raw_parts(children,
+                                            nchildren as usize).iter()
+                .map(|&a| a as Window).collect();
+            xlib::XFree(children as *mut libc::c_void);
+            Some((root, parent, vec))
+        }
+        else{
+            None
+        }
+    }
+
+}
 pub fn set_input_focus(context: Context, window: Window) {
     let none = 0;
     let pointer_root = 1;
@@ -198,7 +252,7 @@ pub fn set_input_focus(context: Context, window: Window) {
     unsafe{
         let (old, _) = get_input_focus(context);
         debug!("set focus from {} to {}", old, window);
-        xlib::XSetInputFocus(context.display, window, pointer_root, 0);
+        xlib::XSetInputFocus(context.display, window, none, 0);
     }
 }
 
@@ -215,7 +269,6 @@ pub fn unmap_window(context: Context, window: Window) -> c_int{
     unsafe{
         xlib::XUnmapWindow(context.display, window)
     }
-
 }
 
 pub fn configure_window(context: Context, window: Window, mask:c_uint, mut change: xlib::XWindowChanges) {
