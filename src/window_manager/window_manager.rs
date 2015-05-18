@@ -14,7 +14,7 @@ use x11::keysym;
 use super::super::libx;
 
 use super::config::Config;
-use super::workspace::{ Workspace, Workspaces };
+use super::{ Workspace, Workspaces };
 use super::handler;
 
 unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XErrorEvent) -> libc::c_int {
