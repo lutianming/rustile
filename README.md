@@ -1,5 +1,6 @@
-# rustile
 [![Build Status](https://travis-ci.org/lutianming/rustile.svg?branch=master)](https://travis-ci.org/lutianming/rustile)
+
+# rustile
 Rustile is a tiling window manager written by rust.
 
 # configurations
