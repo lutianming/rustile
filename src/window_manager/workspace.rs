@@ -3,9 +3,7 @@ extern crate libc;
 use x11::xlib::{ Window, Display };
 
 use std::boxed::Box;
-use std::collections::HashMap;
 use super::layout;
-use super::WindowManager;
 use super::super::libx;
 use super::super::libx::Context;
 
@@ -36,34 +34,61 @@ impl Workspace {
         }
     }
 
-    pub fn add(&mut self, window: Window) {
+    pub fn add(&mut self, window: Window, context: Context) -> bool {
+        let mut added = false;
+
+        // should not add root window
+        if window == libx::root_window(context, self.screen_num) {
+            return added;
+        }
+
         let index = self.contain(window);
         match index {
             Some(i) => {
                 // already there, do nothing
             }
             None => {
-                self.windows.push(window) ;
+                self.windows.push(window);
+                self.focus = Some(window);
                 if self.visible {
-                    //
+                    libx::map_window(context, window);
+                    self.config(context);
+                    libx::set_input_focus(context, window);
                 }
-                self.clean = false;
+                added = true;
+                // self.clean = false;
             }
         }
+        added
     }
 
-    pub fn remove(&mut self, window: Window) {
+    pub fn remove(&mut self, window: Window, context: Context) -> bool {
+        let mut removed = false;
         let index = self.contain(window);
         match index {
             Some(i) => {
-                self.windows.remove(i);
-                self.clean = false;
-                if self.visible {
-
+                // if the window focused, change to next
+                if self.focus.unwrap() == window {
+                    let next = self.next_window(window);
+                    if next == window {
+                        // removing the last one
+                        self.set_focus(None, context);
+                    }
+                    else{
+                        self.set_focus(Some(next), context);
+                    }
                 }
+
+                self.windows.remove(i);
+                if self.visible {
+                    libx::unmap_window(context, window);
+                    self.config(context);
+                }
+                removed = true;
             }
             None => {}
         };
+        removed
     }
 
     pub fn get(&self, index: usize) -> Window{
@@ -86,20 +111,74 @@ impl Workspace {
             libx::map_window(context, *w);
         }
         self.visible = true;
-    }
 
-    pub fn set_focus(&mut self, window: Window, context: Context) {
-        match self.contain(window) {
-            Some(i) => {
-                libx::set_input_focus(context, window);
-                self.focus = Some(window);
+        match self.focus {
+            Some(w) => {
+                libx::set_input_focus(context, w);
             }
-            None => {}
+            None => {
+                let root = libx::root_window(context, self.screen_num);
+                libx::set_input_focus(context, root);
+            }
         }
     }
 
-    pub fn unset_focus(&mut self) {
-        self.focus = None;
+    pub fn set_focus(&mut self, window: Option<Window>, context: Context) {
+        match window {
+            Some(w) => {
+                match self.contain(w) {
+                    Some(i) => {
+                        self.focus = window;
+                        if self.visible {
+                            libx::set_input_focus(context, w);
+                        }
+                    }
+                    None => {}
+                }
+            }
+            None => {
+                // set to root
+                self.focus = window;
+                if self.visible {
+                    let root = libx::root_window(context, self.screen_num);
+                    libx::set_input_focus(context, root);
+                }
+            }
+        }
+    }
+
+    pub fn get_focus(&self) -> Option<Window>{
+        self.focus
+    }
+
+    pub fn last_window(&mut self, window: Window) -> Window{
+        match self.contain(window) {
+            Some(i) => {
+                let mut last = i-1;
+                if last < 0 {
+                    last = self.size() - 1
+                }
+                self.get(last)
+            }
+            None => {
+                window
+            }
+        }
+    }
+
+    pub fn next_window(&self, window: Window) -> Window{
+        match self.contain(window) {
+            Some(i) => {
+                let mut next = i+1;
+                if next == self.size() {
+                    next = 0;
+                }
+                self.get(next)
+            }
+            None => {
+                window
+            }
+        }
     }
 
     pub fn contain(&self, window: Window) -> Option<usize>{
@@ -122,93 +201,8 @@ impl Workspace {
     }
 
     pub fn config(&mut self, context: Context) {
+        println!("windows {}", self.windows.len());
         self.layout.configure(&self.windows, context, self.screen_num);
         self.clean = true;
-    }
-}
-
-pub struct Workspaces {
-    current: char,
-    pub spaces: HashMap<char, Workspace>,
-}
-
-impl Workspaces {
-    pub fn new() -> Workspaces {
-        Workspaces {
-            current: '1',
-            spaces: HashMap::new()
-        }
-    }
-
-    pub fn contain(&self, key: char) -> bool {
-        self.spaces.contains_key(&key)
-    }
-
-    pub fn create(&mut self, key: char, screen_num: libc::c_int) {
-        let space = Workspace::new(screen_num);
-        self.spaces.insert(key, space);
-    }
-
-    pub fn delete(&mut self, key: char) {
-        self.spaces.remove(&key);
-    }
-
-    pub fn get(&mut self, key: char) -> Option<&mut Workspace>{
-        self.spaces.get_mut(&key)
-    }
-
-    pub fn current(&mut self) -> &mut Workspace {
-        self.spaces.get_mut(&self.current).unwrap()
-    }
-
-    pub fn current_name(&self) -> char {
-        self.current
-    }
-
-    pub fn switch_current(&mut self, new: char, context: Context){
-        if new == self.current {
-            return
-        }
-
-        let old = self.current;
-        self.current = new;
-
-        if !self.contain(old) || !self.contain(new) {
-            return
-        }
-
-        match self.get(old) {
-            Some(v) => {
-                v.hide(context);
-            }
-            None => {}
-        }
-
-        match self.get(new) {
-            Some(v) => {
-                v.show(context);
-            }
-            None => {}
-        }
-    }
-
-    pub fn move_window(&mut self, window: Window, from: char, to: char){
-        if from == to {
-            return
-        }
-
-        if !self.contain(from) || !self.contain(to) {
-            return
-        }
-
-        match self.get(from) {
-            Some(w) => { w.remove(window);}
-            None => {}
-        }
-
-        match self.get(to) {
-            Some(w) => { w.add(window);}
-            None => {}
-        }
     }
 }
