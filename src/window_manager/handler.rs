@@ -8,7 +8,7 @@ use std::boxed::Box;
 use x11::xlib;
 use x11::xlib::{ Display, Window };
 use super::WindowManager;
-use super::workspace::Workspaces;
+use super::Workspaces;
 use super::layout;
 use super::super::libx;
 use super::super::libx::Context;
@@ -89,14 +89,14 @@ impl Handler for WindowCloseHandler {
 impl Handler for WindowFocusHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
         debug!("change focus in current workspace");
-        let (window, _) = libx::get_input_focus(context);
+        let window = workspaces.get_focus(context);
 
         println!("window {}", window);
         let current = workspaces.current();
         match current.contain(window) {
             Some(i) => {
-                let next = if (i+1) >= current.size() { 0 } else { i+1 };
-                libx::set_input_focus(context, current.get(next));
+                let next = current.next_window(window);
+                current.set_focus(Some(next), context);
             }
             None => {}
         }
@@ -106,50 +106,13 @@ impl Handler for WindowFocusHandler {
 
 impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
-        debug!("handle window move form {} to {}", workspaces.current_name(), self.key);
+        let window = workspaces.get_focus(context);
+        debug!("handle window {} move form {} to {}", window, workspaces.current_name(), self.key);
 
-        let (window, _) = libx::get_input_focus(context);
-        println!("window {}", window);
-
-        // let mut root: Window = 0;
-        // let mut parent: Window = window;
-        // let mut children: *mut Window = ptr::null_mut();
-        // let mut nchildren: libc::c_uint = 0;
-
-        // while parent != root {
-        //     window = parent;
-        //     unsafe{
-        //         let s = xlib::XQueryTree(context, window, &mut root, &mut parent, &mut children, &mut nchildren);
-        //         if s > 0 {
-        //             println!("parent {} root {}", parent, root);
-        //             xlib::XFree(children as *mut libc::c_void);
-        //         }
-        //         else{
-        //             println!("error");
-        //         }
-        //     }
-        // }
-
-        println!("focused window {}", window);
         let from = workspaces.current_name();
         let to = self.key;
-
-        if !workspaces.contain(to) {
-            workspaces.create(to, screen_num);
-        }
-
-        workspaces.move_window(window, from, to);
-        match workspaces.get(from){
-            Some(w) => { w.config(context)}
-            None => {}
-        };
-
-        match workspaces.get(self.key) {
-            Some(w) => {
-                w.config(context)
-            }
-            None => {}
-        };
+        workspaces.move_window(window, from, to, context);
+        println!("focus {}", workspaces.get_focus(context));
     }
 }
 
