@@ -14,8 +14,12 @@ use x11::xlib;
 use x11::xlib::{ Display, Window };
 use libc::{ c_int, c_long, c_uint, c_ulong, c_void };
 
+#[derive(Debug, Copy, Clone)]
+pub struct Context {
+    display: *mut Display
+}
 
-pub fn open_display(name: Option<&str>) -> Option<*mut Display> {
+pub fn open_display(name: Option<&str>) -> Option<Context> {
     unsafe{
         let display = match name {
             Some(n) => {
@@ -32,40 +36,43 @@ pub fn open_display(name: Option<&str>) -> Option<*mut Display> {
             // let b = Some(Box::<Display>::new(*display));
             // xlib::XFree(display as *mut libc::c_void);
             // b
-            Some(display)
+            let c = Context {
+                display: display,
+            };
+            Some(c)
         }
     }
 }
 
-pub fn close_display(display: *mut Display) {
+pub fn close_display(context: Context) {
     unsafe{
-        xlib::XCloseDisplay(display);
+        xlib::XCloseDisplay(context.display);
     }
 }
 
-pub fn default_screen(display: *mut Display) -> c_int {
+pub fn default_screen(context: Context) -> c_int {
     unsafe{
-        xlib::XDefaultScreen(display)
+        xlib::XDefaultScreen(context.display)
     }
 }
 
-pub fn root_window(display: *mut Display, screen_num: c_int) -> c_ulong {
+pub fn root_window(context: Context, screen_num: c_int) -> c_ulong {
     unsafe {
-        xlib::XRootWindow(display, screen_num)
+        xlib::XRootWindow(context.display, screen_num)
     }
 }
 
-pub fn next_event(display: *mut Display) -> xlib::XEvent {
+pub fn next_event(context: Context) -> xlib::XEvent {
     unsafe{
         let mut e: xlib::XEvent = mem::zeroed();
-        xlib::XNextEvent(display, &mut e);
+        xlib::XNextEvent(context.display, &mut e);
         e
     }
 }
 
-pub fn get_atom_name(display: *mut Display, atom: xlib::Atom) -> Option<String> {
+pub fn get_atom_name(context: Context, atom: xlib::Atom) -> Option<String> {
     unsafe{
-        let name = xlib::XGetAtomName(display, atom);
+        let name = xlib::XGetAtomName(context.display, atom);
         if name == ptr::null_mut() {
             return None
         }
@@ -82,18 +89,18 @@ pub fn get_atom_name(display: *mut Display, atom: xlib::Atom) -> Option<String> 
     }
 }
 
-pub fn get_atom(display: *mut Display, name: &str) -> xlib::Atom{
+pub fn get_atom(context: Context, name: &str) -> xlib::Atom{
     unsafe{
         let cstr = ffi::CString::new(name).unwrap();
-        let atom = xlib::XInternAtom(display, cstr.as_ptr(), xlib::False);
+        let atom = xlib::XInternAtom(context.display, cstr.as_ptr(), xlib::False);
         atom
     }
 }
 
-pub fn get_text_property(display: *mut Display, window: xlib::Window, atom: xlib::Atom) -> Option<String>{
+pub fn get_text_property(context: Context, window: xlib::Window, atom: xlib::Atom) -> Option<String>{
     unsafe{
         let mut prop: xlib::XTextProperty = mem::zeroed();
-        let r = xlib::XGetTextProperty(display, window, &mut prop, atom);
+        let r = xlib::XGetTextProperty(context.display, window, &mut prop, atom);
         if r == 0 || prop.nitems == 0{
             None
         }else{
@@ -111,11 +118,11 @@ pub fn get_text_property(display: *mut Display, window: xlib::Window, atom: xlib
     }
 }
 
-pub fn get_wm_protocols(display: *mut Display, window: Window) -> Vec<xlib::Atom>{
+pub fn get_wm_protocols(context: Context, window: Window) -> Vec<xlib::Atom>{
     unsafe{
         let mut atoms: *mut xlib::Atom = ptr::null_mut();
         let mut count = 0;
-        let s = xlib::XGetWMProtocols(display, window, &mut atoms, &mut count);
+        let s = xlib::XGetWMProtocols(context.display, window, &mut atoms, &mut count);
         let mut vec: Vec<xlib::Atom> = Vec::new();
         if s > 0 {
             vec = slice::from_raw_parts(atoms, count as usize).iter()
@@ -126,29 +133,29 @@ pub fn get_wm_protocols(display: *mut Display, window: Window) -> Vec<xlib::Atom
     }
 }
 
-pub fn get_window_attributes(display: *mut Display, window: Window) -> xlib::XWindowAttributes {
+pub fn get_window_attributes(context: Context, window: Window) -> xlib::XWindowAttributes {
     unsafe{
         let mut attrs: xlib::XWindowAttributes = mem::zeroed();
-        xlib::XGetWindowAttributes(display, window, &mut attrs);
+        xlib::XGetWindowAttributes(context.display, window, &mut attrs);
         attrs
     }
 }
 
-pub fn get_transient_for_hint(display: *mut Display, window: Window) -> i32 {
+pub fn get_transient_for_hint(context: Context, window: Window) -> i32 {
     unsafe{
         let mut window_return: xlib::Window = 0;
-        xlib::XGetTransientForHint(display, window, &mut window_return)
+        xlib::XGetTransientForHint(context.display, window, &mut window_return)
     }
 }
 
-pub fn change_window_attributes(display: *mut Display, window: Window, valuemask: c_ulong, attrs: *mut xlib::XSetWindowAttributes) {
+pub fn change_window_attributes(context: Context, window: Window, valuemask: c_ulong, attrs: *mut xlib::XSetWindowAttributes) {
     unsafe{
-        xlib::XChangeWindowAttributes(display, window, valuemask, attrs);
+        xlib::XChangeWindowAttributes(context.display, window, valuemask, attrs);
     }
 
 }
 
-fn get_window_property(display: *mut xlib::Display, window: Window, atom: xlib::Atom) {
+fn get_window_property(context: Context, window: Window, atom: xlib::Atom) {
     unsafe {
         let mut actual_type_return: u64 = 0;
         let mut actual_format_return: i32 = 0;
@@ -156,7 +163,7 @@ fn get_window_property(display: *mut xlib::Display, window: Window, atom: xlib::
         let mut bytes_after_return: libc::c_ulong = 0;
         let mut prop_return: *mut libc::c_uchar = mem::zeroed();
 
-        let r = xlib::XGetWindowProperty(display, window, xlib::XA_WM_NAME,
+        let r = xlib::XGetWindowProperty(context.display, window, xlib::XA_WM_NAME,
                                          0, 0xFFFFFFFF, 0, 0,
                                          &mut actual_type_return,
                                          &mut actual_format_return,
@@ -184,50 +191,53 @@ fn get_window_property(display: *mut xlib::Display, window: Window, atom: xlib::
     }
 }
 
-pub fn set_input_focus(display: *mut Display, window: Window) {
+pub fn set_input_focus(context: Context, window: Window) {
     let none = 0;
     let pointer_root = 1;
     let parent = 2;
     unsafe{
-        xlib::XSetInputFocus(display, window, pointer_root, 0);
+        let (old, _) = get_input_focus(context);
+        debug!("set focus from {} to {}", old, window);
+        xlib::XSetInputFocus(context.display, window, pointer_root, 0);
     }
 }
 
-pub fn get_input_focus(display: *mut Display) -> (Window, c_int){
+pub fn get_input_focus(context: Context) -> (Window, c_int){
     let mut window: xlib::Window = 0;
     let mut revert_to: libc::c_int = 0;
     unsafe{
-        let s = xlib::XGetInputFocus(display, &mut window, &mut revert_to);
+        let s = xlib::XGetInputFocus(context.display, &mut window, &mut revert_to);
     }
     (window, revert_to)
 }
 
-pub fn unmap_window(display: *mut Display, window: Window) -> c_int{
+pub fn unmap_window(context: Context, window: Window) -> c_int{
     unsafe{
-        xlib::XUnmapWindow(display, window)
+        xlib::XUnmapWindow(context.display, window)
     }
 
 }
 
-pub fn configure_window(display: *mut Display, window: Window, mask:c_uint, mut change: xlib::XWindowChanges) {
+pub fn configure_window(context: Context, window: Window, mask:c_uint, mut change: xlib::XWindowChanges) {
     unsafe{
-        xlib::XConfigureWindow(display, window, mask, &mut change);
+        xlib::XConfigureWindow(context.display, window, mask, &mut change);
     }
 }
-pub fn map_window(display: *mut Display, window: Window) -> c_int{
+pub fn map_window(context: Context, window: Window) -> c_int{
     unsafe{
-        xlib::XMapWindow(display, window)
+        xlib::XMapWindow(context.display, window)
     }
 }
 
-pub fn kill_window(display: *mut Display, window: Window) {
+pub fn kill_window(context: Context, window: Window) {
     let mut event: xlib::XClientMessageEvent = unsafe {
         mem::zeroed()
     };
 
-    let wm_delete_window = get_atom(display, "WM_DELETE_WINDOW");
-    let wm_protocols = get_atom(display, "WM_PROTOCOLS");
-    let protocols = get_wm_protocols(display, window);
+    let display = context.display;
+    let wm_delete_window = get_atom(context, "WM_DELETE_WINDOW");
+    let wm_protocols = get_atom(context, "WM_PROTOCOLS");
+    let protocols = get_wm_protocols(context, window);
 
     if protocols.iter().any(|&p| p == wm_delete_window){
         event.type_ = xlib::ClientMessage;
@@ -239,7 +249,7 @@ pub fn kill_window(display: *mut Display, window: Window) {
         event.data.set_long(0, wm_delete_window as libc::c_long);
 
         let mut e: xlib::XEvent = From::from(event);
-        send_event(display, window, xlib::True, xlib::NoEventMask, e);
+        send_event(context, window, xlib::True, xlib::NoEventMask, e);
     }
     else{
         unsafe{
@@ -249,11 +259,11 @@ pub fn kill_window(display: *mut Display, window: Window) {
 
 }
 
-pub fn send_event(display: *mut Display, window: Window,
+pub fn send_event(context: Context, window: Window,
                   propagate: c_int, event_mask: c_long,
                   mut event: xlib::XEvent) {
     unsafe{
-        xlib::XSendEvent(display, window, propagate, event_mask, &mut event);
+        xlib::XSendEvent(context.display, window, propagate, event_mask, &mut event);
     }
 }
 
@@ -263,6 +273,30 @@ pub fn string_to_keysym(s: &str) -> xlib::KeySym {
         xlib::XStringToKeysym(tmp.as_ptr())
     }
 
+}
+
+pub fn select_input(context: Context, window: Window, mask: c_long) {
+    unsafe{
+        xlib::XSelectInput(context.display, window, mask);
+    }
+}
+
+pub fn sync(context: Context, discard: c_int) {
+    unsafe {
+        xlib::XSync(context.display, discard);
+    }
+}
+
+pub fn display_height(context: Context, screen_num: c_int) -> c_int{
+    unsafe{
+        xlib::XDisplayHeight(context.display, screen_num)
+    }
+}
+
+pub fn display_width(context: Context, screen_num: c_int) -> c_int{
+    unsafe{
+        xlib::XDisplayWidth(context.display, screen_num)
+    }
 }
 
 #[cfg(test)]

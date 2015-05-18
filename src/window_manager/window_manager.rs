@@ -28,7 +28,7 @@ unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XE
 }
 
 pub struct WindowManager {
-    pub display: *mut xlib::Display,
+    pub context: libx::Context,
     pub screen_num: libc::c_int,
     pub root:    xlib::Window,
 
@@ -38,8 +38,8 @@ pub struct WindowManager {
 
 impl WindowManager {
     pub fn new() -> WindowManager {
-	let display = libx::open_display(None);
-        let display = match display {
+	let context = libx::open_display(None);
+        let context = match context {
             Some(p) => {
                 p
             }
@@ -48,23 +48,29 @@ impl WindowManager {
             }
         };
 
-	let screen_num  = libx::default_screen(display);
-	let root = libx::root_window(display, screen_num);
+	let screen_num  = libx::default_screen(context);
+	let root = libx::root_window(context, screen_num);
         println!("root window {}", root);
 	let mut wm = WindowManager {
-	    display: display,
+            context: context,
             screen_num: screen_num,
 	    root: root,
 
             config: Config::load(),
             workspaces: Workspaces::new()
         };
-        wm.workspaces.create('1');
+        wm.workspaces.create('1', screen_num);
         wm
     }
 
     pub fn clean(&mut self) {
-        libx::close_display(self.display);
+        libx::close_display(self.context);
+    }
+
+    pub fn is_top_window(&self, window: xlib::Window) -> bool{
+        let attrs = libx::get_window_attributes(self.context, window);
+        let transientfor_hint = libx::get_transient_for_hint(self.context, window);
+        attrs.override_redirect == 0 && transientfor_hint == 0
     }
 
     pub fn handle_create(&mut self, event: &xlib::XCreateWindowEvent) {
@@ -72,24 +78,19 @@ impl WindowManager {
             return;
         }
 
-        let attrs = libx::get_window_attributes(self.display, event.window);
-        println!("before");
-        println!("attr all event {}", attrs.all_event_masks);
-        println!("attr you event {}", attrs.your_event_mask);
-
-
+        let attrs = libx::get_window_attributes(self.context, event.window);
 
         // get window property
-        let n = libx::get_text_property(self.display, event.window, xlib::XA_WM_NAME);
+        let n = libx::get_text_property(self.context, event.window, xlib::XA_WM_NAME);
         match n {
             Some(s) => {debug!("create window {} for {}", event.window, s);}
             None => {}
         }
 
-        // let atoms = libx::get_wm_protocols(self.display, event.window);
+        // let atoms = libx::get_wm_protocols(self.context, event.window);
         // for a in atoms.iter() {
         //     println!("atom {}", a);
-        //     let name = libx::get_atom_name(self.display, *a);
+        //     let name = libx::get_atom_name(self.context, *a);
         //     match name {
         //         Some(n) => println!("name {}", n),
         //         None => println!("name {}", a),
@@ -99,47 +100,50 @@ impl WindowManager {
 
     pub fn handle_destroy(&mut self, event: &xlib::XDestroyWindowEvent) {
         let workspace = self.workspaces.current();
+        println!("current windows {}", workspace.size());
         match workspace.contain(event.window) {
             Some(index) => {
+                println!("in workspace");
                 workspace.remove(event.window);
-                workspace.config(self.display, self.screen_num);
+                workspace.config(self.context);
             }
-            None => {}
+            None => { println!("not in workspace"); }
         }
     }
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
-        unsafe{
-            xlib::XMapWindow(self.display, event.window);
+        libx::map_window(self.context, event.window);
 
-            // add app top-level window to workspace
+        // add app top-level window to workspace
+        let manage = self.is_top_window(event.window);
+        if manage {
+            debug!("top level window");
+            let mut workspace = self.workspaces.current();
+            if workspace.contain(event.window).is_none() {
+                workspace.add(event.window);
+                workspace.config(self.context);
+            }
 
-            let attrs = libx::get_window_attributes(self.display, event.window);
-            let transientfor_hint = libx::get_transient_for_hint(self.display, event.window);
+            libx::set_input_focus(self.context, event.window);
 
-            println!("trans hint {}", transientfor_hint);
-            if attrs.override_redirect == 0 && transientfor_hint == 0 {
-                debug!("top level window");
-                let mut workspace = self.workspaces.current();
-                if workspace.contain(event.window).is_none() {
-                    workspace.add(event.window);
-                    workspace.config(self.display, self.screen_num);
-                }
-
-                // change attributes before display
-                unsafe{
-                    let mut attrs: xlib::XSetWindowAttributes = mem::zeroed();
-                    attrs.event_mask = xlib::KeyReleaseMask | xlib::FocusChangeMask | xlib::EnterWindowMask;
-                    let valuemask = xlib::CWEventMask;
-                    libx::change_window_attributes(self.display, event.window, valuemask, &mut attrs);
-                }
+            let attrs = libx::get_window_attributes(self.context, event.window);
+            println!("masks {}", attrs.all_event_masks);
+            println!("mask button press {}", attrs.all_event_masks | xlib::ButtonPressMask);
+            // change attributes before display
+            unsafe{
+                let mask = xlib::OwnerGrabButtonMask | xlib::KeyReleaseMask | xlib::PointerMotionHintMask | xlib::EnterWindowMask;
+                // let mut attrs: xlib::XSetWindowAttributes = mem::zeroed();
+                // attrs.event_mask = xlib::KeyReleaseMask | xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::EnterWindowMask;
+                // let valuemask = xlib::CWEventMask;
+                // libx::change_window_attributes(self.context, event.window, valuemask, &mut attrs);
+                libx::select_input(self.context, event.window, mask);
             }
         }
     }
 
     pub fn handle_client_message(&mut self, event: &xlib::XClientMessageEvent) {
         println!("message type {}", event.message_type);
-        let s = libx::get_atom_name(self.display, event.message_type);
+        let s = libx::get_atom_name(self.context, event.message_type);
         match s {
             Some(v) => println!("{}", &v),
             None => {}
@@ -159,15 +163,23 @@ impl WindowManager {
             32 => {
                 for i in 0..5 {
                     let a = event.data.get_long(i);
-                    println!("data {}", a);
-                    // let s = libx::get_atom_name(self.display, a as xlib::Atom);
-                    // match s {
-                    //     Some(v) => println!("{}", v),
-                    //     None => {}
-                    // }
+                    if a != 0{
+                        let s = libx::get_atom_name(self.context, a as xlib::Atom);
+                        match s {
+                            Some(v) => println!("{}", v),
+                            None => {}
+                        }
+                    }
                 }
             }
             _ => {}
+        }
+    }
+
+    pub fn handle_button_motion(&mut self, event: &xlib::XMotionEvent) {
+        let (window, _) = libx::get_input_focus(self.context);
+        if window != event.window {
+            libx::set_input_focus(self.context, window);
         }
     }
 
@@ -186,7 +198,7 @@ impl WindowManager {
             // let mut h: Box<handler::Handler>;
             match self.config.bindsyms.get_mut(&b) {
                 Some(handler) => {
-                    handler.handle(&mut self.workspaces, self.display, self.screen_num);
+                    handler.handle(&mut self.workspaces, self.context, self.screen_num);
                 }
                 None => {
                     println!("no bind");
@@ -207,20 +219,18 @@ impl WindowManager {
         };
         debug!("config x: {}, y: {}, width: {}, height: {}",
                change.x, change.y, change.width, change.height);
-        libx::configure_window(event.display, event.window, event.value_mask as u32, change);
+        libx::configure_window(self.context, event.window, event.value_mask as u32, change);
     }
 
     pub fn handle_focus_in(&mut self, event: &xlib::XFocusChangeEvent) {
-        libx::set_input_focus(self.display, event.window);
-        let (window, _) = libx::get_input_focus(self.display);
+        libx::set_input_focus(self.context, event.window);
+        let (window, _) = libx::get_input_focus(self.context);
         println!("window {}", window);
       }
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
-        println!("set focus");
-        println!("is focused {}", event.focus);
         if event.focus == 0 {
-            libx::set_input_focus(self.display, event.window);
+            libx::set_input_focus(self.context, event.window);
         }
     }
 
@@ -229,25 +239,25 @@ impl WindowManager {
         match t {
             xlib::CreateNotify => {
                 let event: xlib::XCreateWindowEvent = From::from(e);
+                debug!("create notify {}", event.window);
                 self.handle_create(&event);
             }
             xlib::DestroyNotify => {
-                debug!("destroy notify");
                 let event: xlib::XDestroyWindowEvent = From::from(e);
+                debug!("destroy notify {}", event.window);
                 self.handle_destroy(&event);
             }
             xlib::MapNotify => {
-                debug!("map notify");
                 let event: xlib::XMapEvent = From::from(e);
-
+                debug!("map notify {}", event.window);
             }
             xlib::UnmapNotify => {
-                debug!("unmap notify");
                 let event: xlib::XUnmapEvent = From::from(e);
+                debug!("unmap notify {}", event.window);
             }
             xlib::MapRequest => {
-                debug!("map request");
                 let event: xlib::XMapRequestEvent = From::from(e);
+                debug!("map request {}", event.window);
                 self.handle_map_request(&event);
             }
             xlib::ClientMessage => {
@@ -260,6 +270,19 @@ impl WindowManager {
                 debug!("key release");
                 let mut event: xlib::XKeyEvent = From::from(e);
                 self.handle_key_release(&mut event);
+            }
+            xlib::MotionNotify => {
+                let mut event: xlib::XMotionEvent = From::from(e);
+                debug!("button motion {}", event.window);
+                self.handle_button_motion(&event);
+            }
+            xlib::ButtonRelease => {
+                let mut event: xlib::XButtonEvent = From::from(e);
+                debug!("button release {}", event.window);
+            }
+            xlib::ButtonPress => {
+                let mut event: xlib::XButtonEvent = From::from(e);
+                debug!("button press {}", event.window);
             }
             xlib::ConfigureNotify => {
                 debug!("configure notify");
@@ -293,21 +316,19 @@ impl WindowManager {
     pub fn run(&mut self) {
         loop {
             //handle events here
-            unsafe {
-                let mut e = libx::next_event(self.display);
-                self.handle(e);
-            }
+            let mut e = libx::next_event(self.context);
+            self.handle(e);
         }
     }
 
     pub fn init(&mut self) {
         let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask;
-        let keymask = xlib::KeyPressMask | xlib::KeyReleaseMask;
+        let keymask = xlib::KeyPressMask | xlib::KeyReleaseMask | xlib::ButtonPressMask | xlib::ButtonReleaseMask;
         unsafe{
             // xlib::XSetErrorHandler(Some(error_handler));
-            xlib::XSelectInput(self.display, self.root,
+            libx::select_input(self.context, self.root,
                                mask | keymask);
-            xlib::XSync(self.display, 0);
+            libx::sync(self.context, 0);
         }
     }
 }
