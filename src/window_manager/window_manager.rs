@@ -173,13 +173,9 @@ impl WindowManager {
         }
     }
 
-    pub fn handle_key_release(&mut self, event: &mut xlib::XKeyEvent) {
+    pub fn handle_key_release(&mut self, event: &xlib::XKeyEvent) {
         if event.state > 0 {
-            let mut sym: xlib::KeySym = 0;
-            let status: *mut xlib::XComposeStatus = ptr::null_mut();
-            unsafe{
-                xlib::XLookupString(event, ptr::null_mut(), 0, &mut sym, status);
-            }
+            let sym = libx::lookup_keysym(*event, 0);
             let b = handler::KeyBind {
                 key: sym,
                 mask: event.state,
@@ -269,6 +265,7 @@ impl WindowManager {
             xlib::ButtonRelease => {
                 let mut event: xlib::XButtonEvent = From::from(e);
                 debug!("button release {}", event.window);
+                println!("{}", self.workspaces.get_focus(self.context));
             }
             xlib::ButtonPress => {
                 let mut event: xlib::XButtonEvent = From::from(e);

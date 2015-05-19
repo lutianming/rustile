@@ -13,4 +13,7 @@ bind $mod+5 focus left
 bind $mod+6 focus right
 
 bind $mod+7 kill
+
+bind $mod+Shift+c exec dmenu_run
+
 exec pwd

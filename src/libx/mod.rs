@@ -245,6 +245,25 @@ pub fn query_tree(context: Context, window: Window) -> Option<(Window, Window, V
     }
 
 }
+
+pub fn lookup_keysym(event: xlib::XKeyEvent, index: c_int) -> c_ulong{
+    let mut e = event;
+    unsafe{
+        xlib::XLookupKeysym(&mut e, index)
+    }
+}
+
+// pub fn loopup_string(event: xlib::XKeyEvent) -> Option<(c_ulong, String)>{
+//     let mut sym: xlib::KeySym = 0;
+//     let status: *mut xlib::XComposeStatus = ptr::null_mut();
+
+//     unsafe{
+//         let mut e = event;
+//         xlib::XLookupString(&mut e, ptr::null_mut(), 0, &mut sym, status);
+//     }
+
+// }
+
 pub fn set_input_focus(context: Context, window: Window) {
     let none = 0;
     let pointer_root = 1;
@@ -317,6 +336,23 @@ pub fn send_event(context: Context, window: Window,
                   mut event: xlib::XEvent) {
     unsafe{
         xlib::XSendEvent(context.display, window, propagate, event_mask, &mut event);
+    }
+}
+
+pub fn keysym_to_string(keysym: c_ulong) -> Option<String> {
+    let mut sym: xlib::KeySym = 0;
+    let status: *mut xlib::XComposeStatus = ptr::null_mut();
+    unsafe{
+        let s = xlib::XKeysymToString(keysym);
+        let cstr = ffi::CStr::from_ptr(s);
+        match str::from_utf8(cstr.to_bytes()) {
+            Ok(s) => {
+                Some(s.to_string())
+            }
+            _ => {
+                None
+            }
+        }
     }
 }
 
