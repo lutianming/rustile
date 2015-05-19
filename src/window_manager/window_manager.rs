@@ -113,19 +113,14 @@ impl WindowManager {
         if manage {
             debug!("top level window");
             self.workspaces.add_window(event.window, None, self.context);
-
-            libx::set_input_focus(self.context, event.window);
-
             let attrs = libx::get_window_attributes(self.context, event.window);
             println!("masks {}", attrs.all_event_masks);
-            println!("mask button press {}", attrs.all_event_masks | xlib::ButtonPressMask);
+            println!("propagate {}", attrs.do_not_propagate_mask);
+            println!("mask button press {}", attrs.all_event_masks & xlib::ButtonPressMask);
             // change attributes before display
             unsafe{
-                let mask = xlib::OwnerGrabButtonMask | xlib::KeyReleaseMask | xlib::PointerMotionHintMask | xlib::EnterWindowMask;
-                // let mut attrs: xlib::XSetWindowAttributes = mem::zeroed();
-                // attrs.event_mask = xlib::KeyReleaseMask | xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::EnterWindowMask;
-                // let valuemask = xlib::CWEventMask;
-                // libx::change_window_attributes(self.context, event.window, valuemask, &mut attrs);
+                let mask = 0x420010;
+                let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
                 libx::select_input(self.context, event.window, mask);
             }
         }
@@ -225,6 +220,9 @@ impl WindowManager {
       }
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
+        let (w, _) = libx::get_input_focus(self.context);
+        println!("current focus {}", w);
+        println!("focus {}", event.focus);
         if event.focus == 0 {
             libx::set_input_focus(self.context, event.window);
         }

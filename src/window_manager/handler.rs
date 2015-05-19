@@ -15,7 +15,7 @@ use super::super::libx::Context;
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 pub struct KeyBind {
-    pub key: u64,
+    pub key: xlib::KeySym,
     pub mask: u32,
 }
 
