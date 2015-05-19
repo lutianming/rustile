@@ -193,6 +193,16 @@ impl WindowManager {
         }
     }
 
+    pub fn handle_property(&mut self, event: &xlib::XPropertyEvent) {
+        let usertime = libx::get_atom(self.context, "_NET_WM_USER_TIME");
+        match event.atom {
+            usertime => {
+                debug!("_NET_WM_USER_TIME");
+                self.workspaces.set_focus(event.window, self.context);
+            }
+        }
+    }
+
     pub fn handle_configure_request(&mut self, event: &xlib::XConfigureRequestEvent) {
         let mut change = xlib::XWindowChanges {
             x: event.x,
@@ -289,11 +299,15 @@ impl WindowManager {
                 let mut event: xlib::XFocusChangeEvent = From::from(e);
                 debug!("focus out {}", event.window);
             }
-
             xlib::EnterNotify => {
                 let mut event: xlib::XCrossingEvent = From::from(e);
                 debug!("enter window {}", event.window);
                 self.handle_enter(&event);
+            }
+            xlib::PropertyNotify => {
+                let mut event: xlib::XPropertyEvent = From::from(e);
+                debug!("property notify {}", event.window);
+                self.handle_property(&event);
             }
             _ => {
                 debug!("unhandled event {}", t);
@@ -309,13 +323,26 @@ impl WindowManager {
     }
 
     pub fn init(&mut self) {
-        let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask;
-        let keymask = xlib::KeyPressMask | xlib::KeyReleaseMask | xlib::ButtonPressMask | xlib::ButtonReleaseMask;
+        let mask = 0x1A0034;
+        let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask| xlib::ButtonPressMask;
+
         unsafe{
             // xlib::XSetErrorHandler(Some(error_handler));
-            libx::select_input(self.context, self.root,
-                               mask | keymask);
-            libx::sync(self.context, 0);
         }
+        let left_ptr: u32 = 68;
+        libx::define_cursor(self.context, self.root, left_ptr);
+
+
+        libx::ungrab_button(self.context, 0, 0x8000, self.root);
+        libx::select_input(self.context, self.root,
+                           mask);
+
+        for bind in self.config.bindsyms.keys() {
+            let code = libx::keysym_to_keycode(self.context, bind.key);
+            libx::grab_key(self.context, code, bind.mask, self.root);
+        }
+        // let anymodifier = 1 << 15;
+        // libx::grab_button(self.context, 0, anymodifier, self.root);
+        libx::sync(self.context, 0);
     }
 }
