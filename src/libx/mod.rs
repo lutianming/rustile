@@ -70,6 +70,35 @@ pub fn next_event(context: Context) -> xlib::XEvent {
     }
 }
 
+pub fn define_cursor(context: Context, window: Window, shape: c_uint) {
+    unsafe {
+        let cursor = xlib::XCreateFontCursor(context.display, shape);
+        xlib::XDefineCursor(context.display, window, cursor);
+    }
+}
+
+pub fn grab_key(context: Context, keycode: xlib::KeyCode, modifiers: c_uint, window: Window) {
+    unsafe {
+        xlib::XGrabKey(context.display, keycode as c_int, modifiers, window, 1, xlib::GrabModeAsync, xlib::GrabModeAsync);
+    }
+}
+
+pub fn grab_button(context: Context, button: c_uint, modifiers: c_uint, window: Window) {
+    unsafe {
+        xlib::XGrabButton(context.display, button, modifiers, window,
+                          0,
+                          xlib::ButtonPressMask as c_uint,
+                          xlib::GrabModeAsync, xlib::GrabModeAsync,
+                          0, 0);
+    }
+}
+
+pub fn ungrab_button(context: Context, button: c_uint, modifiers: c_uint, window: Window) {
+    unsafe{
+        xlib::XUngrabButton(context.display, button, modifiers, window);
+    }
+}
+
 pub fn get_atom_name(context: Context, atom: xlib::Atom) -> Option<String> {
     unsafe{
         let name = xlib::XGetAtomName(context.display, atom);
@@ -353,6 +382,12 @@ pub fn keysym_to_string(keysym: c_ulong) -> Option<String> {
                 None
             }
         }
+    }
+}
+
+pub fn keysym_to_keycode(context: Context, keysym: xlib::KeySym) -> xlib::KeyCode {
+    unsafe {
+        xlib::XKeysymToKeycode(context.display, keysym)
     }
 }
 
