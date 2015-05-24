@@ -1,16 +1,6 @@
 extern crate libc;
 
-use std::ptr;
-use std::mem;
-use std::ffi;
-use std::str;
-use std::slice::from_raw_parts;
-use std::string::String;
-use std::collections::HashMap;
-use std::boxed::Box;
 use x11::xlib;
-use x11::keysym;
-
 use super::super::libx;
 
 use super::config::Config;
@@ -171,7 +161,7 @@ impl WindowManager {
                 mask: event.state,
             };
             debug!("key {} {}", event.state, sym);
-            // let mut h: Box<handler::Handler>;
+
             match self.config.bindsyms.get_mut(&b) {
                 Some(handler) => {
                     handler.handle(&mut self.workspaces, self.context, self.screen_num);
