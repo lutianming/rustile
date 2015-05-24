@@ -4,7 +4,7 @@ extern crate log;
 extern crate env_logger;
 
 extern crate rustile;
-use rustile::window_manager::WindowManager;
+use rustile::core::WindowManager;
 
 fn main() {
     env_logger::init().unwrap();
