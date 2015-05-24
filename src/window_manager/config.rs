@@ -123,6 +123,10 @@ impl Config {
                         let handler = LayoutHandler::new(layout::Type::Tiling);
                         self.bindsyms.insert(bind, Box::new(handler));
                     }
+                    "tab" => {
+                        let handler = LayoutHandler::new(layout::Type::Tab);
+                        self.bindsyms.insert(bind, Box::new(handler));
+                    }
                     _ => {}
                 }
             }

@@ -33,10 +33,46 @@ pub enum Direction {
 #[derive(PartialEq, Clone)]
 pub enum Type {
     Tiling,
+    Tab,
 }
 
 pub struct TilingLayout {
     direction: Direction,
+}
+
+pub struct TabLayout;
+
+impl Layout for TabLayout {
+    fn get_type(&self) -> Type { Type::Tab }
+    fn configure(&self, windows: &[window], context: libx::Context, screen_num: libc::c_int) {
+        let size = windows.len();
+        if size == 0{
+            return;
+        }
+        let screen_height = libx::display_height(context, screen_num);
+        let screen_width = libx::display_width(context, screen_num);
+
+        let mask = CWX | CWY | CWHeight | CWWidth;
+
+        let width = screen_width  / size as libc::c_int;
+        let height = screen_height / size as libc::c_int;
+        println!("screen width {} height {}", width, height);
+
+        // choose a window
+        let window = windows[0];
+        let mut change = xlib::XWindowChanges {
+            x: 0,
+            y: 0,
+            width: screen_width,
+            height: screen_height,
+            border_width: 0,
+            sibling: 0,
+            stack_mode: 0
+        };
+        debug!("config window {} x: {}, y: {}, width: {}, height: {}",
+               *w, change.x, change.y, change.width, change.height);
+        libx::configure_window(context, *w, mask, change);
+    }
 }
 
 impl TilingLayout {
@@ -57,7 +93,7 @@ impl Layout for TilingLayout {
         }
     }
     /// once we add or remove a window, we need to reconfig
-    fn configure(&self, windows: &[Window], context: libx::Context,screen_num: libc::c_int,) {
+    fn configure(&self, windows: &[Window], context: libx::Context,screen_num: libc::c_int) {
         let size = windows.len();
         if size == 0 {
             return;

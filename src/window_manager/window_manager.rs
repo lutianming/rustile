@@ -113,16 +113,11 @@ impl WindowManager {
         if manage {
             debug!("top level window");
             self.workspaces.add_window(event.window, None, self.context);
-            let attrs = libx::get_window_attributes(self.context, event.window);
-            println!("masks {}", attrs.all_event_masks);
-            println!("propagate {}", attrs.do_not_propagate_mask);
-            println!("mask button press {}", attrs.all_event_masks & xlib::ButtonPressMask);
+
             // change attributes before display
-            unsafe{
-                let mask = 0x420010;
-                let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
-                libx::select_input(self.context, event.window, mask);
-            }
+            let mask = 0x420010;
+            let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
+            libx::select_input(self.context, event.window, mask);
         }
     }
 
@@ -322,7 +317,7 @@ impl WindowManager {
 
     pub fn init(&mut self) {
         let mask = 0x1A0034;
-        let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask| xlib::ButtonPressMask;
+        let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask;
 
         unsafe{
             // xlib::XSetErrorHandler(Some(error_handler));
