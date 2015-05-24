@@ -4,6 +4,7 @@ use x11::xlib;
 use super::super::libx;
 
 use super::config::Config;
+use super::Window;
 use super::{ Workspace, Workspaces };
 use super::handler;
 
@@ -91,18 +92,21 @@ impl WindowManager {
     }
 
     pub fn handle_destroy(&mut self, event: &xlib::XDestroyWindowEvent) {
-        self.workspaces.remove_window(event.window, self.context);
+        let window = Window::new(self.context, event.window);
+        self.workspaces.remove_window(window, self.context);
     }
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
-        libx::map_window(self.context, event.window);
+        let window = Window::new(self.context, event.window);
+        window.map();
 
         // add app top-level window to workspace
         let manage = self.is_top_window(event.window);
 
         if manage {
             debug!("top level window");
-            self.workspaces.add_window(event.window, None, self.context);
+            let window = Window::new(self.context, event.window);
+            self.workspaces.add_window(window, None, self.context);
 
             // change attributes before display
             let mask = 0x420010;
@@ -178,7 +182,8 @@ impl WindowManager {
         match event.atom {
             usertime => {
                 debug!("_NET_WM_USER_TIME");
-                self.workspaces.set_focus(event.window, self.context);
+                let window = Window::new(self.context, event.window);
+                self.workspaces.set_focus(window, self.context);
             }
         }
     }
@@ -258,7 +263,7 @@ impl WindowManager {
             xlib::ButtonRelease => {
                 let mut event: xlib::XButtonEvent = From::from(e);
                 debug!("button release {}", event.window);
-                println!("{}", self.workspaces.get_focus(self.context));
+                println!("{}", self.workspaces.get_focus(self.context).id);
             }
             xlib::ButtonPress => {
                 let mut event: xlib::XButtonEvent = From::from(e);
