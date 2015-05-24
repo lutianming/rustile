@@ -6,9 +6,9 @@ use std::process::Command;
 use std::boxed::Box;
 
 use x11::xlib;
-use x11::xlib::{ Display, Window };
 use super::WindowManager;
 use super::Workspaces;
+use super::Window;
 use super::layout;
 use super::super::libx;
 use super::super::libx::Context;
@@ -91,7 +91,7 @@ impl Handler for WindowFocusHandler {
         debug!("change focus in current workspace");
         let window = workspaces.get_focus(context);
 
-        println!("window {}", window);
+        println!("window {}", window.id);
         let current = workspaces.current();
         match current.contain(window) {
             Some(i) => {
@@ -107,12 +107,12 @@ impl Handler for WindowFocusHandler {
 impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
         let window = workspaces.get_focus(context);
-        debug!("handle window {} move form {} to {}", window, workspaces.current_name(), self.key);
+        debug!("handle window {} move form {} to {}", window.id, workspaces.current_name(), self.key);
 
         let from = workspaces.current_name();
         let to = self.key;
         workspaces.move_window(window, from, to, context);
-        println!("focus {}", workspaces.get_focus(context));
+        println!("focus {}", workspaces.get_focus(context).id);
     }
 }
 

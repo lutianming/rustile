@@ -1,9 +1,8 @@
 extern crate libc;
 
-use x11::xlib::{ Window, Display };
-
 use std::boxed::Box;
 use super::layout;
+use super::Window;
 use super::super::libx;
 use super::super::libx::Context;
 
@@ -30,7 +29,7 @@ impl Workspace {
 
     pub fn p(&self) {
         for w in self.windows.iter() {
-            println!("{}", w);
+            println!("{}", w.id);
         }
     }
 
@@ -38,7 +37,8 @@ impl Workspace {
         let mut added = false;
 
         // should not add root window
-        if window == libx::root_window(context, self.screen_num) {
+        let root = Window::root(context, self.screen_num);
+        if window == root {
             return added;
         }
 
@@ -51,9 +51,9 @@ impl Workspace {
                 self.windows.push(window);
                 self.focus = Some(window);
                 if self.visible {
-                    libx::map_window(context, window);
+                    window.map();
                     self.config(context);
-                    libx::set_input_focus(context, window);
+                    window.focus();
                 }
                 added = true;
                 // self.clean = false;
@@ -81,7 +81,7 @@ impl Workspace {
 
                 self.windows.remove(i);
                 if self.visible {
-                    libx::unmap_window(context, window);
+                    window.unmap();
                     self.config(context);
                 }
                 removed = true;
@@ -101,20 +101,20 @@ impl Workspace {
 
     pub fn hide(&mut self, context: Context) {
         for w in self.windows.iter() {
-            libx::unmap_window(context, *w);
+            w.unmap();
         }
         self.visible = false;
     }
 
     pub fn show(&mut self, context: Context) {
         for w in self.windows.iter() {
-            libx::map_window(context, *w);
+            w.map();
         }
         self.visible = true;
 
         match self.focus {
             Some(w) => {
-                libx::set_input_focus(context, w);
+                w.focus();
             }
             None => {
                 let root = libx::root_window(context, self.screen_num);
@@ -130,7 +130,7 @@ impl Workspace {
                     Some(i) => {
                         self.focus = window;
                         if self.visible {
-                            libx::set_input_focus(context, w);
+                            w.focus();
                         }
                     }
                     None => {}
@@ -196,12 +196,15 @@ impl Workspace {
                     let tmp = layout::TilingLayout::new(layout::Direction::Horizontal);
                     self.layout = Box::new(tmp);
                 }
+                layout::Type::Tab => {
+                    let tmp = layout::TabLayout::new();
+                    self.layout = Box::new(tmp);
+                }
             }
         }
     }
 
     pub fn config(&mut self, context: Context) {
-        println!("windows {}", self.windows.len());
         self.layout.configure(&self.windows, context, self.screen_num);
         self.clean = true;
     }

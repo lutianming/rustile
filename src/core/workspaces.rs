@@ -2,7 +2,7 @@ extern crate x11;
 extern crate libc;
 
 use std::collections::HashMap;
-use x11::xlib::{ Window };
+use super::Window;
 use super::Workspace;
 use super::super::libx;
 use super::super::libx::{ Context };
@@ -10,6 +10,7 @@ use super::super::libx::{ Context };
 
 pub struct Workspaces {
     current: char,
+    pub windows: HashMap<u64, Window>,
     pub spaces: HashMap<char, Workspace>,
 }
 
@@ -17,7 +18,8 @@ impl Workspaces {
     pub fn new() -> Workspaces {
         Workspaces {
             current: '1',
-            spaces: HashMap::new()
+            spaces: HashMap::new(),
+            windows: HashMap::new()
         }
     }
 
@@ -121,7 +123,7 @@ impl Workspaces {
                 c.add(window, context);
             }
         }
-        debug!("add window {}", window);
+        debug!("add window {}", window.id);
     }
 
     pub fn remove_window(&mut self, window: Window, context: Context) {
@@ -138,10 +140,10 @@ impl Workspaces {
     }
 
     pub fn set_focus(&mut self, window: Window, context: Context) {
-        libx::set_input_focus(context, window);
+        libx::set_input_focus(context, window.id);
     }
-    pub fn get_focus(&mut self, context: Context) -> Window{
-        let (window, _) = libx::get_input_focus(context);
-        window
+    pub fn get_focus(&mut self, context: Context) -> Window {
+        let (w, _) = libx::get_input_focus(context);
+        self.windows.get(&w).unwrap().clone()
     }
 }

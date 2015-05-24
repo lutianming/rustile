@@ -1,9 +1,9 @@
 extern crate libc;
 
-use x11::xlib::Window;
 use x11::xlib;
 
 use super::super::libx;
+use super::Window;
 
 const CWX: libc::c_uint = 1<<0;
 const CWY: libc::c_uint = 1<<1;
@@ -42,36 +42,28 @@ pub struct TilingLayout {
 
 pub struct TabLayout;
 
+impl TabLayout {
+    pub fn new() -> TabLayout{
+        TabLayout
+    }
+}
 impl Layout for TabLayout {
     fn get_type(&self) -> Type { Type::Tab }
-    fn configure(&self, windows: &[window], context: libx::Context, screen_num: libc::c_int) {
+    fn configure(&self, windows: &[Window], context: libx::Context, screen_num: libc::c_int) {
         let size = windows.len();
         if size == 0{
             return;
         }
+
+        let window = windows[0];
+
         let screen_height = libx::display_height(context, screen_num);
         let screen_width = libx::display_width(context, screen_num);
 
-        let mask = CWX | CWY | CWHeight | CWWidth;
+        let width = screen_width;
+        let height = screen_height;
 
-        let width = screen_width  / size as libc::c_int;
-        let height = screen_height / size as libc::c_int;
-        println!("screen width {} height {}", width, height);
-
-        // choose a window
-        let window = windows[0];
-        let mut change = xlib::XWindowChanges {
-            x: 0,
-            y: 0,
-            width: screen_width,
-            height: screen_height,
-            border_width: 0,
-            sibling: 0,
-            stack_mode: 0
-        };
-        debug!("config window {} x: {}, y: {}, width: {}, height: {}",
-               *w, change.x, change.y, change.width, change.height);
-        libx::configure_window(context, *w, mask, change);
+        window.configure(0, 0, width, height);
     }
 }
 
@@ -105,32 +97,26 @@ impl Layout for TilingLayout {
 
         let width = screen_width  / size as libc::c_int;
         let height = screen_height / size as libc::c_int;
-        println!("screen width {} height {}", width, height);
-        for (i, w) in windows.iter().enumerate() {
-            let mut change = xlib::XWindowChanges {
-                x: 0,
-                y: 0,
-                width: screen_width,
-                height: screen_height,
-                border_width: 0,
-                sibling: 0,
-                stack_mode: 0
-            };
+        println!("screen width {} height {}", screen_width, screen_height);
+        for (i, window) in windows.iter().enumerate() {
+            let mut x = 0;
+            let mut y = 0;
+            let mut w = screen_width;
+            let mut h = screen_height;
+
             match self.direction {
                 Direction::Vertical => {
-                    change.y = height * i as libc::c_int;
-                    change.height = height;
+                    y = height * i as libc::c_int;
+                    h = height;
                 }
                 Direction::Horizontal => {
-                    change.x = width * i as libc::c_int;
-                    change.width = width;
+                    x = width * i as libc::c_int;
+                    w = width;
                 }
                 _ => {}
             };
-
-            debug!("config window {} x: {}, y: {}, width: {}, height: {}",
-                   *w, change.x, change.y, change.width, change.height);
-            libx::configure_window(context, *w, mask, change);
+            println!("{} {} {} {} {}", window.id, x, y,  w, h);
+            window.configure(x, y, w, h);
         }
     }
 }
