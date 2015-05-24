@@ -27,6 +27,7 @@ use super::handler::{
 pub struct Config {
     mod_key: u32,
     pub bindsyms: HashMap<KeyBind, Box<Handler>>,
+    pub titlebar_height: u32,
 }
 
 impl Config {
@@ -69,6 +70,7 @@ impl Config {
         let mut config = Config {
             mod_key: xlib::Mod4Mask,
             bindsyms: HashMap::new(),
+            titlebar_height: 20,
         };
         // let dmenu = vec!["$mod+c", "exec", "dmenu_run"];
         // let split = vec!["$mod+b", "layout", "split"];

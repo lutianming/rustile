@@ -60,12 +60,6 @@ impl WindowManager {
         libx::close_display(self.context);
     }
 
-    pub fn is_top_window(&self, window: xlib::Window) -> bool{
-        let attrs = libx::get_window_attributes(self.context, window);
-        let transientfor_hint = libx::get_transient_for_hint(self.context, window);
-        attrs.override_redirect == 0 && transientfor_hint == 0
-    }
-
     pub fn handle_create(&mut self, event: &xlib::XCreateWindowEvent) {
         if event.override_redirect != 0 {
             return;
@@ -74,11 +68,11 @@ impl WindowManager {
         let attrs = libx::get_window_attributes(self.context, event.window);
 
         // get window property
-        let n = libx::get_text_property(self.context, event.window, xlib::XA_WM_NAME);
-        match n {
-            Some(s) => {debug!("create window {} for {}", event.window, s);}
-            None => {}
-        }
+        // let n = libx::get_text_property(self.context, event.window, xlib::XA_WM_NAME);
+        // match n {
+        //     Some(s) => {debug!("create window {} for {}", event.window, s);}
+        //     None => {}
+        // }
 
         // let atoms = libx::get_wm_protocols(self.context, event.window);
         // for a in atoms.iter() {
@@ -97,22 +91,33 @@ impl WindowManager {
     }
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
-        let window = Window::new(self.context, event.window);
-        window.map();
-
         // add app top-level window to workspace
-        let manage = self.is_top_window(event.window);
+        let w = Window::new(self.context, event.window);
+        let manage = w.is_top();
 
         if manage {
             debug!("top level window");
-            let window = Window::new(self.context, event.window);
+            let window = if self.config.titlebar_height > 0 {
+                Window::decorate(self.context, event.window)
+            }else {
+                Window::new(self.context, event.window)
+            };
+            window.map();
+
+            println!("{}", window.id);
+            println!("{}", event.window);
             self.workspaces.add_window(window, None, self.context);
 
             // change attributes before display
             let mask = 0x420010;
             let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
-            libx::select_input(self.context, event.window, mask);
+            libx::select_input(self.context, window.id, mask);
         }
+        else {
+            let window = Window::new(self.context, event.window);
+            window.map();
+        }
+
     }
 
     pub fn handle_client_message(&mut self, event: &xlib::XClientMessageEvent) {

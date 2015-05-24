@@ -16,7 +16,7 @@ use libc::{ c_int, c_long, c_uint, c_ulong, c_void };
 
 #[derive(Debug, Copy, Clone)]
 pub struct Context {
-    display: *mut Display
+    pub display: *mut Display
 }
 
 pub fn open_display(name: Option<&str>) -> Option<Context> {
@@ -53,6 +53,12 @@ pub fn close_display(context: Context) {
 pub fn default_screen(context: Context) -> c_int {
     unsafe{
         xlib::XDefaultScreen(context.display)
+    }
+}
+
+pub fn create_window(context: Context, parent: Window, x: c_int, y: c_int, width: c_uint, height: c_uint) -> Window{
+    unsafe {
+        xlib::XCreateSimpleWindow(context.display, parent, x, y, width, height, 0, 0, 0)
     }
 }
 
@@ -192,7 +198,7 @@ fn get_window_property(context: Context, window: Window, atom: xlib::Atom) {
         let mut bytes_after_return: libc::c_ulong = 0;
         let mut prop_return: *mut libc::c_uchar = mem::zeroed();
 
-        let r = xlib::XGetWindowProperty(context.display, window, xlib::XA_WM_NAME,
+        let r = xlib::XGetWindowProperty(context.display, window, atom,
                                          0, 0xFFFFFFFF, 0, 0,
                                          &mut actual_type_return,
                                          &mut actual_format_return,
@@ -224,24 +230,20 @@ pub fn get_top_window(context: Context, window: Window)-> Option<Window>{
     let mut w = window;
     let mut root = window;
     let mut parent = window;
-    unsafe{
-        while parent != root {
-            w = parent;
-            unsafe{
-                let res = query_tree(context, w);
-                match res {
-                    Some((r, p, _)) => {
-                        parent = p;
-                        root = r;
-                    }
-                    None => {
-                        return None
-                    }
-                }
+    while parent != root {
+        w = parent;
+        let res = query_tree(context, w);
+        match res {
+            Some((r, p, _)) => {
+                parent = p;
+                root = r;
+            }
+            None => {
+                return None
             }
         }
-        Some(w)
     }
+    Some(w)
 }
 
 pub fn get_children(context: Context, window: Window) -> Option<Vec<Window>> {
@@ -254,6 +256,11 @@ pub fn get_children(context: Context, window: Window) -> Option<Vec<Window>> {
     }
 }
 
+pub fn reparent(context: Context, window: Window, parent: Window, x: c_int, y: c_int) {
+    unsafe {
+        xlib::XReparentWindow(context.display, window, parent, x, y);
+    }
+}
 pub fn query_tree(context: Context, window: Window) -> Option<(Window, Window, Vec<Window>)> {
     let mut root: Window = 0;
     let mut parent: Window = window;
@@ -349,7 +356,7 @@ pub fn kill_window(context: Context, window: Window) {
         event.display = display;
         event.data.set_long(0, wm_delete_window as libc::c_long);
 
-        let mut e: xlib::XEvent = From::from(event);
+        let e: xlib::XEvent = From::from(event);
         send_event(context, window, xlib::True, xlib::NoEventMask, e);
     }
     else{
@@ -369,7 +376,6 @@ pub fn send_event(context: Context, window: Window,
 }
 
 pub fn keysym_to_string(keysym: c_ulong) -> Option<String> {
-    let mut sym: xlib::KeySym = 0;
     let status: *mut xlib::XComposeStatus = ptr::null_mut();
     unsafe{
         let s = xlib::XKeysymToString(keysym);

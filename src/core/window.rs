@@ -12,9 +12,12 @@ const CWBorderWidth: libc::c_uint = 1<<4;
 const CWSibling: libc::c_uint =	1<<5;
 const CWStackMode: libc::c_uint = 1<<6;
 
+const TITLE_HEIGHT: libc::c_int = 20;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Window {
     pub id: xlib::Window,
+    client: Option<xlib::Window>,
     context: libx::Context,
 }
 
@@ -28,6 +31,7 @@ impl Window {
     pub fn new(context: libx::Context, id: xlib::Window) -> Window{
         Window {
             context: context,
+            client: None,
             id: id
         }
     }
@@ -36,8 +40,50 @@ impl Window {
         let root = libx::root_window(context, screen_num);
         Window {
             context: context,
+            client: None,
             id: root,
         }
+    }
+
+    pub fn decorate(context: libx::Context, id: xlib::Window) -> Window {
+        let res = libx::query_tree(context, id);
+
+        match res {
+            Some((root, _, _)) => {
+                let attrs = libx::get_window_attributes(context, id);
+                let parent = libx::create_window(context, root, attrs.x, attrs.y, attrs.width as libc::c_uint, attrs.height as libc::c_uint);
+                libx::select_input(context, parent, attrs.all_event_masks);
+                libx::reparent(context, id, parent, 0, TITLE_HEIGHT);
+
+                Window {
+                    context: context,
+                    client: Some(id),
+                    id: parent
+                }
+            }
+            None => {
+                Window {
+                    context: context,
+                    client: None,
+                    id: id
+                }
+            }
+        }
+    }
+
+    pub fn top(&self) -> Window{
+        let top_id = libx::get_top_window(self.context, self.id);
+        Window {
+            context: self.context,
+            client: Some(self.id),
+            id: top_id.unwrap()
+        }
+    }
+
+    pub fn is_top(&self) -> bool {
+        let attrs = libx::get_window_attributes(self.context, self.id);
+        let transientfor_hint = libx::get_transient_for_hint(self.context, self.id);
+        attrs.override_redirect == 0 && transientfor_hint == 0
     }
 
     pub fn configure(&self, x: i32, y: i32, width: i32, height: i32) {
@@ -53,10 +99,23 @@ impl Window {
             stack_mode: 0
         };
         libx::configure_window(self.context, self.id, mask, change);
+
+        match self.client {
+            Some(c) => {
+                let w = Window::new(self.context, c);
+                println!("{} {} {}", c, width, height-TITLE_HEIGHT);
+                w.configure(0, TITLE_HEIGHT, width, height-TITLE_HEIGHT);
+
+            }
+            None => {}
+        }
     }
 
     pub fn map(&self) {
         libx::map_window(self.context, self.id);
+        unsafe{
+            xlib::XMapSubwindows(self.context.display, self.id);
+        }
     }
 
     pub fn unmap(&self) {
@@ -65,6 +124,13 @@ impl Window {
 
     pub fn focus(&self) {
         libx::set_input_focus(self.context, self.id);
+    }
+
+    fn draw_titlebar(&self) {
+        let attrs = libx::get_window_attributes(self.context, self.id);
+        unsafe {
+
+        }
     }
 }
 
