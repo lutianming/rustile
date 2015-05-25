@@ -92,26 +92,25 @@ impl WindowManager {
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
         // add app top-level window to workspace
-        let w = Window::new(self.context, event.window);
-        let manage = w.is_top();
+        let window = Window::new(self.context, event.window);
+        let manage = window.can_manage();
 
         if manage {
             debug!("top level window");
-            let window = if self.config.titlebar_height > 0 {
-                Window::decorate(self.context, event.window)
-            }else {
-                Window::new(self.context, event.window)
-            };
-            window.map();
-
-            println!("{}", window.id);
-            println!("{}", event.window);
-            self.workspaces.add_window(window, None, self.context);
 
             // change attributes before display
             let mask = 0x420010;
             let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
             libx::select_input(self.context, window.id, mask);
+
+            if self.config.titlebar_height > 0 {
+                let parent = Window::decorate(self.context, event.window);
+                // parent.map();
+                self.workspaces.add_window(parent, None, self.context);
+            }else {
+                // window.map();
+                self.workspaces.add_window(window, None, self.context);
+            };
         }
         else {
             let window = Window::new(self.context, event.window);

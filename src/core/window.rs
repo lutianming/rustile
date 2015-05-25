@@ -17,7 +17,7 @@ const TITLE_HEIGHT: libc::c_int = 20;
 #[derive(Debug, Copy, Clone)]
 pub struct Window {
     pub id: xlib::Window,
-    client: Option<xlib::Window>,
+    pub client: Option<xlib::Window>,
     context: libx::Context,
 }
 
@@ -52,7 +52,7 @@ impl Window {
             Some((root, _, _)) => {
                 let attrs = libx::get_window_attributes(context, id);
                 let parent = libx::create_window(context, root, attrs.x, attrs.y, attrs.width as libc::c_uint, attrs.height as libc::c_uint);
-                libx::select_input(context, parent, attrs.all_event_masks);
+                libx::select_input(context, parent, attrs.all_event_masks| xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask);
                 libx::reparent(context, id, parent, 0, TITLE_HEIGHT);
 
                 Window {
@@ -71,7 +71,7 @@ impl Window {
         }
     }
 
-    pub fn top(&self) -> Window{
+    pub fn get_top(&self) -> Window{
         let top_id = libx::get_top_window(self.context, self.id);
         Window {
             context: self.context,
@@ -81,6 +81,10 @@ impl Window {
     }
 
     pub fn is_top(&self) -> bool {
+        self.get_top().id == self.id
+    }
+
+    pub fn can_manage(&self) -> bool {
         let attrs = libx::get_window_attributes(self.context, self.id);
         let transientfor_hint = libx::get_transient_for_hint(self.context, self.id);
         attrs.override_redirect == 0 && transientfor_hint == 0
@@ -114,11 +118,18 @@ impl Window {
     pub fn map(&self) {
         libx::map_window(self.context, self.id);
         unsafe{
-            xlib::XMapSubwindows(self.context.display, self.id);
+            if self.client.is_some(){
+                xlib::XMapSubwindows(self.context.display, self.id);
+            }
+
         }
     }
 
     pub fn unmap(&self) {
+        unsafe {
+            if self.client.is_some(){
+                xlib::XUnmapSubwindows(self.context.display, self.id);                 }
+        }
         libx::unmap_window(self.context, self.id);
     }
 
