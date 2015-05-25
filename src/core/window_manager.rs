@@ -88,6 +88,9 @@ impl WindowManager {
     pub fn handle_destroy(&mut self, event: &xlib::XDestroyWindowEvent) {
         let window = Window::new(self.context, event.window);
         self.workspaces.remove_window(window, self.context);
+        if self.workspaces.get_focus(self.context).is_none() {
+            libx::set_input_focus(self.context, self.root);
+        }
     }
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
@@ -105,10 +108,10 @@ impl WindowManager {
 
             if self.config.titlebar_height > 0 {
                 let parent = Window::decorate(self.context, event.window);
-                // parent.map();
+                parent.map();
                 self.workspaces.add_window(parent, None, self.context);
             }else {
-                // window.map();
+                window.map();
                 self.workspaces.add_window(window, None, self.context);
             };
         }

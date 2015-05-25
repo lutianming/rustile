@@ -27,68 +27,36 @@ impl Workspace {
         }
     }
 
-    pub fn p(&self) {
-        for w in self.windows.iter() {
-            println!("{}", w.id);
-        }
-    }
-
-    pub fn add(&mut self, window: Window, context: Context) -> bool {
-        let mut added = false;
-
+    pub fn add(&mut self, window: Window, context: Context) -> Option<Window> {
         // should not add root window
-        let root = Window::root(context, self.screen_num);
+        let root = Window::root(window.context, self.screen_num);
         if window == root {
-            return added;
+            return None;
         }
 
         let index = self.contain(window);
         match index {
             Some(i) => {
                 // already there, do nothing
+                None
             }
             None => {
                 self.windows.push(window);
-                self.focus = Some(window);
-                if self.visible {
-                    window.map();
-                    self.config(context);
-                    window.focus();
-                }
-                added = true;
-                // self.clean = false;
+                Some(window)
             }
         }
-        added
     }
 
-    pub fn remove(&mut self, window: Window, context: Context) -> bool {
-        let mut removed = false;
+    pub fn remove(&mut self, window: Window, context: Context) -> Option<Window> {
         let index = self.contain(window);
         match index {
             Some(i) => {
-                // if the window focused, change to next
-                if self.focus.unwrap() == window {
-                    let next = self.next_window(window);
-                    if next == window {
-                        // removing the last one
-                        self.set_focus(None, context);
-                    }
-                    else{
-                        self.set_focus(Some(next), context);
-                    }
-                }
-
+                let w = self.get(i);
                 self.windows.remove(i);
-                if self.visible {
-                    window.unmap();
-                    self.config(context);
-                }
-                removed = true;
+                Some(w)
             }
-            None => {}
-        };
-        removed
+            None => { None }
+        }
     }
 
     pub fn get(&self, index: usize) -> Window{

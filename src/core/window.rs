@@ -148,6 +148,12 @@ impl Window {
         libx::unmap_window(self.context, self.id);
     }
 
+    pub fn destroy(&self) {
+        unsafe{
+            xlib::XDestroyWindow(self.context.display, self.id);
+        }
+    }
+
     pub fn focus(&self) {
         println!("focus {:?}", self);
         match self.client {

@@ -111,6 +111,7 @@ impl Workspaces {
                 match self.get(k) {
                     Some(w) => {
                         w.add(window, context);
+                        w.config(context);
                     }
                     None => {}
                 }
@@ -119,6 +120,7 @@ impl Workspaces {
                 // use current workspace
                 let c = self.current();
                 c.add(window, context);
+                c.config(context);
             }
         }
         debug!("add window {}", window.id);
@@ -130,9 +132,17 @@ impl Workspaces {
         //     return
         // }
 
-        for (k, w) in self.spaces.iter_mut() {
-            if w.remove(window, context){
-                return;
+        for (k, workspace) in self.spaces.iter_mut() {
+            let res =  workspace.remove(window, context);
+            match res {
+                Some(w) => {
+                    w.destroy();
+                    workspace.config(context);
+                    return;
+                }
+                None => {
+
+                }
             }
         }
     }
