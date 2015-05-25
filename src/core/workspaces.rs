@@ -10,7 +10,6 @@ use super::super::libx::{ Context };
 
 pub struct Workspaces {
     current: char,
-    pub windows: HashMap<u64, Window>,
     pub spaces: HashMap<char, Workspace>,
 }
 
@@ -19,7 +18,6 @@ impl Workspaces {
         Workspaces {
             current: '1',
             spaces: HashMap::new(),
-            windows: HashMap::new()
         }
     }
 
@@ -67,7 +65,7 @@ impl Workspaces {
 
         match self.get(old) {
             Some(v) => {
-                v.hide(context);
+                v.hide();
                 v.config(context);
             }
             None => {}
@@ -140,10 +138,44 @@ impl Workspaces {
     }
 
     pub fn set_focus(&mut self, window: Window, context: Context) {
-        libx::set_input_focus(context, window.id);
+        let res = self.get_focus(context);
+        match res {
+            Some(w) => {
+                w.unfocus();
+            }
+            None => {}
+        }
+
+        let res = self.find_window(window);
+        match res {
+            Some((k, index)) => {
+                self.get(k).unwrap().get(index).focus();
+            }
+            None => {}
+        }
     }
-    pub fn get_focus(&mut self, context: Context) -> Window {
+
+    pub fn get_focus(&mut self, context: Context) -> Option<Window> {
         let (w, _) = libx::get_input_focus(context);
-        self.windows.get(&w).unwrap().clone()
+        let res = self.find_window(Window::new(context, w));
+        match res {
+            Some((k, index)) => {
+                Some(self.get(k).unwrap().get(index))
+            }
+            None => { None }
+        }
+    }
+
+    pub fn find_window(&self, window: Window) -> Option<(char, usize)> {
+        for (k, w) in self.spaces.iter() {
+            let index = w.contain(window);
+            match index {
+                Some(i) => {
+                    return Some((*k, i))
+                }
+                None => {}
+            }
+        }
+        None
     }
 }

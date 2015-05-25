@@ -89,30 +89,38 @@ impl Handler for WindowCloseHandler {
 impl Handler for WindowFocusHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
         debug!("change focus in current workspace");
-        let window = workspaces.get_focus(context);
+        let res = workspaces.get_focus(context);
 
-        println!("window {}", window.id);
-        let current = workspaces.current();
-        match current.contain(window) {
-            Some(i) => {
-                let next = current.next_window(window);
-                current.set_focus(Some(next), context);
+        match res {
+            Some(window) => {
+                println!("window {}", window.id);
+                let current = workspaces.current();
+                match current.contain(window) {
+                    Some(i) => {
+                        let next = current.next_window(window);
+                        current.set_focus(Some(next), context);
+                    }
+                    None => {}
+                }
             }
             None => {}
         }
+
 
     }
 }
 
 impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
-        let window = workspaces.get_focus(context);
-        debug!("handle window {} move form {} to {}", window.id, workspaces.current_name(), self.key);
-
-        let from = workspaces.current_name();
-        let to = self.key;
-        workspaces.move_window(window, from, to, context);
-        println!("focus {}", workspaces.get_focus(context).id);
+        let res = workspaces.get_focus(context);
+        match res {
+            Some(window) => {
+                let from = workspaces.current_name();
+                let to = self.key;
+                workspaces.move_window(window, from, to, context);
+            }
+            None => {}
+        }
     }
 }
 

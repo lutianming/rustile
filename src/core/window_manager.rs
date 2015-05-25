@@ -214,11 +214,9 @@ impl WindowManager {
       }
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
-        let (w, _) = libx::get_input_focus(self.context);
-        println!("current focus {}", w);
-        println!("focus {}", event.focus);
         if event.focus == 0 {
-            libx::set_input_focus(self.context, event.window);
+            let w = Window::new(self.context, event.window);
+            self.workspaces.set_focus(w, self.context);
         }
     }
 
@@ -267,7 +265,6 @@ impl WindowManager {
             xlib::ButtonRelease => {
                 let mut event: xlib::XButtonEvent = From::from(e);
                 debug!("button release {}", event.window);
-                println!("{}", self.workspaces.get_focus(self.context).id);
             }
             xlib::ButtonPress => {
                 let mut event: xlib::XButtonEvent = From::from(e);
