@@ -99,7 +99,7 @@ impl Workspace {
         self.windows.len()
     }
 
-    pub fn hide(&mut self, context: Context) {
+    pub fn hide(&mut self) {
         for w in self.windows.iter() {
             w.unmap();
         }
