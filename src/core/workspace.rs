@@ -182,7 +182,7 @@ impl Workspace {
     }
 
     pub fn contain(&self, window: Window) -> Option<usize>{
-        self.windows.iter().position(|x| *x == window)
+        self.windows.iter().position(|x| (*x) == window || ((*x).client.is_some() && (*x).client.unwrap() == window.id))
     }
 
     pub fn change_layout(&mut self, layout_type: layout::Type) {
