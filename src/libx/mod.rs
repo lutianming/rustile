@@ -16,7 +16,8 @@ use libc::{ c_int, c_long, c_uint, c_ulong, c_void };
 
 #[derive(Debug, Copy, Clone)]
 pub struct Context {
-    pub display: *mut Display
+    pub display: *mut Display,
+
 }
 
 pub fn open_display(name: Option<&str>) -> Option<Context> {
@@ -176,6 +177,11 @@ pub fn get_window_attributes(context: Context, window: Window) -> xlib::XWindowA
     }
 }
 
+pub fn set_window_attributes(context: Context, window: Window, mask: c_ulong, mut attrs: xlib::XSetWindowAttributes) {
+    unsafe {
+        xlib::XChangeWindowAttributes(context.display, window, mask, &mut attrs);
+    }
+}
 pub fn get_transient_for_hint(context: Context, window: Window) -> i32 {
     unsafe{
         let mut window_return: xlib::Window = 0;
@@ -227,16 +233,24 @@ fn get_window_property(context: Context, window: Window, atom: xlib::Atom) {
 }
 
 pub fn get_top_window(context: Context, window: Window)-> Option<Window>{
+    println!("get top window {}", window);
     let mut w = window;
-    let mut root = window;
-    let mut parent = window;
-    while parent != root {
-        w = parent;
+    let mut root = 0;
+    let mut parent = 0;
+    loop {
         let res = query_tree(context, w);
         match res {
             Some((r, p, _)) => {
-                parent = p;
-                root = r;
+                if r == p {
+                    break;
+                }
+                else{
+                    w = parent;
+                    parent = p;
+                    root = r;
+                    println!("p {}", parent);
+                    println!("r {}", r);
+                }
             }
             None => {
                 return None
@@ -416,6 +430,19 @@ pub fn sync(context: Context, discard: c_int) {
         xlib::XSync(context.display, discard);
     }
 }
+
+pub fn create_gc(context: Context, drawable: xlib::Drawable, mask: c_ulong, mut values: xlib::XGCValues) -> xlib::GC{
+    unsafe {
+        xlib::XCreateGC(context.display, drawable, mask, &mut values)
+    }
+}
+
+pub fn default_gc(context: Context, screen_num: c_int) -> xlib::GC{
+    unsafe {
+        xlib::XDefaultGC(context.display, screen_num)
+    }
+}
+
 
 pub fn display_height(context: Context, screen_num: c_int) -> c_int{
     unsafe{

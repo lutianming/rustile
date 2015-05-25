@@ -2,6 +2,9 @@ extern crate libc;
 extern crate x11;
 
 use x11::xlib;
+use std::ffi;
+use std::ptr;
+use std::mem;
 use super::super::libx;
 
 const CWX: libc::c_uint = 1<<0;
@@ -18,7 +21,7 @@ const TITLE_HEIGHT: libc::c_int = 20;
 pub struct Window {
     pub id: xlib::Window,
     pub client: Option<xlib::Window>,
-    context: libx::Context,
+    pub context: libx::Context,
 }
 
 impl PartialEq for Window {
@@ -52,7 +55,7 @@ impl Window {
             Some((root, _, _)) => {
                 let attrs = libx::get_window_attributes(context, id);
                 let parent = libx::create_window(context, root, attrs.x, attrs.y, attrs.width as libc::c_uint, attrs.height as libc::c_uint);
-                libx::select_input(context, parent, attrs.all_event_masks| xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask);
+                libx::select_input(context, parent, xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask);
                 libx::reparent(context, id, parent, 0, TITLE_HEIGHT);
 
                 Window {
@@ -71,17 +74,29 @@ impl Window {
         }
     }
 
-    pub fn get_top(&self) -> Window{
-        let top_id = libx::get_top_window(self.context, self.id);
-        Window {
-            context: self.context,
-            client: Some(self.id),
-            id: top_id.unwrap()
+    pub fn get_top(&self) -> Option<Window>{
+        let top = libx::get_top_window(self.context, self.id);
+        match top {
+            Some(id) => {
+                let w = Window {
+                    context: self.context,
+                    client: if self.id==id { None } else {Some(self.id)},
+                    id: id
+                };
+                Some(w)
+            }
+            None => { None }
         }
     }
 
     pub fn is_top(&self) -> bool {
-        self.get_top().id == self.id
+        let top = self.get_top();
+        match top {
+            Some(w) => {
+                w.id == self.id
+            }
+            Noen => false
+        }
     }
 
     pub fn can_manage(&self) -> bool {
@@ -109,7 +124,6 @@ impl Window {
                 let w = Window::new(self.context, c);
                 println!("{} {} {}", c, width, height-TITLE_HEIGHT);
                 w.configure(0, TITLE_HEIGHT, width, height-TITLE_HEIGHT);
-
             }
             None => {}
         }
@@ -128,19 +142,107 @@ impl Window {
     pub fn unmap(&self) {
         unsafe {
             if self.client.is_some(){
-                xlib::XUnmapSubwindows(self.context.display, self.id);                 }
+                xlib::XUnmapSubwindows(self.context.display, self.id);
+            }
         }
         libx::unmap_window(self.context, self.id);
     }
 
     pub fn focus(&self) {
-        libx::set_input_focus(self.context, self.id);
+        println!("focus {:?}", self);
+        match self.client {
+            Some(id) => {
+                libx::set_input_focus(self.context, id);
+                self.draw_titlebar(true);
+            }
+            None => {
+                libx::set_input_focus(self.context, self.id);
+            }
+        }
     }
 
-    fn draw_titlebar(&self) {
-        let attrs = libx::get_window_attributes(self.context, self.id);
-        unsafe {
+    pub fn unfocus(&self) {
+        println!("unfocus {:?}", self);
+        if self.client.is_some(){
+            self.draw_titlebar(false);
+        }
+    }
 
+    fn draw_titlebar(&self, focused: bool) {
+        println!("draw titlebar {}", self.id);
+        let attrs = libx::get_window_attributes(self.context, self.id);
+        let screen = libx::default_screen(self.context);
+        let root = libx::root_window(self.context, screen);
+        let mut values: xlib::XGCValues = unsafe{ mem::zeroed() };
+        // let gc = libx::create_gc(self.context, self.id, 0, values);
+        let gc = libx::default_gc(self.context, screen);
+
+
+        unsafe {
+            let black = xlib::XBlackPixel(self.context.display, screen);
+            let white = xlib::XWhitePixel(self.context.display, screen);
+
+            xlib::XSetLineAttributes(self.context.display, gc, 5, 0, 0, 0);
+
+            let cmap = xlib::XDefaultColormap(self.context.display, screen);
+            let mut color: xlib::XColor = mem::zeroed();
+            let name = ffi::CString::new("blue").unwrap().as_ptr();
+            let r = xlib::XParseColor(self.context.display, cmap, name, &mut color);
+            xlib::XAllocColor(self.context.display, cmap, &mut color);
+
+            // let mut set_attrs: xlib::XSetWindowAttributes = mem::zeroed();
+            // if focused {
+            //     set_attrs.background_pixel = color.pixel;
+            //     set_attrs.border_pixel = color.pixel;
+            // }
+            // else {
+            //     set_attrs.background_pixel = black;
+            //     set_attrs.border_pixel = black;
+            // }
+            // libx::set_window_attributes(self.context, self.id, xlib::CWBackPixel | xlib::CWBorderPixel, set_attrs);
+
+
+            // try draw rectangle
+            if focused {
+                xlib::XSetBackground(self.context.display, gc,
+                                     black);
+                xlib::XSetForeground(self.context.display, gc,
+                                     color.pixel);
+            }
+            else {
+                xlib::XSetBackground(self.context.display, gc,
+                                     black);
+                xlib::XSetForeground(self.context.display, gc,
+                                     black);
+            }
+            let r = xlib::XFillRectangle(self.context.display,
+                                         self.id, gc,
+                                         1, 1,
+                                         attrs.width as libc::c_uint,
+                                         TITLE_HEIGHT as libc::c_uint);
+        }
+
+        match self.client {
+            Some(id) => {
+                let p = libx::get_text_property(self.context, id, xlib::XA_WM_NAME);
+                match p {
+                    Some(s) => {
+                        let size = s.len();
+                        println!("draw string {} {}", id, s);
+                        let title = ffi::CString::new("TITLE").unwrap();
+                        unsafe{
+                            xlib::XDrawString(self.context.display,
+                                              self.id,
+                                              gc,
+                                              0, 0,
+                                              title.as_ptr(),
+                                              5);
+                        }
+                    }
+                    None => {}
+                }
+            }
+            None => {}
         }
     }
 }
