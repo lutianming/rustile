@@ -50,7 +50,7 @@ impl Config {
                 for line in buf.lines() {
                     match line {
                         Ok(s) => {
-                            config.read_line(s);
+                            config.parse_line(s);
                         }
                         Err(err) => {
                             // do nothing
@@ -79,7 +79,7 @@ impl Config {
         config
     }
 
-    fn read_line(&mut self, line: String) {
+    fn parse_line(&mut self, line: String) {
         // # is comment
         if !line.starts_with("#") {
             let tokens: Vec<&str> = line.split(' ').collect();
