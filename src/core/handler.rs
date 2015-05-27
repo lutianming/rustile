@@ -8,7 +8,6 @@ use std::boxed::Box;
 use x11::xlib;
 use super::WindowManager;
 use super::Workspaces;
-use super::Window;
 use super::layout;
 use super::super::libx;
 use super::super::libx::Context;
@@ -48,7 +47,7 @@ impl KeyBind {
 }
 
 pub trait Handler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int);
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context);
 }
 
 pub struct ExecHandler {
@@ -76,7 +75,7 @@ pub struct WindowFocusHandler {
 pub struct WindowCloseHandler;
 
 impl Handler for WindowCloseHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("handle window close");
         let (window, _) = libx::get_input_focus(context);
         libx::kill_window(context, window);
@@ -87,48 +86,51 @@ impl Handler for WindowCloseHandler {
     }
 }
 impl Handler for WindowFocusHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("change focus in current workspace");
-        let res = workspaces.get_focus(context);
+        // let res = workspaces.get_focus(context);
 
-        match res {
-            Some(window) => {
-                println!("window {}", window.id);
-                let current = workspaces.current();
-                match current.contain(window) {
-                    Some(i) => {
-                        let next = current.next_window(window);
-                        current.set_focus(Some(next), context);
-                    }
-                    None => {}
-                }
-            }
-            None => {}
-        }
+        // match res {
+        //     Some(container) => {
+        //         println!("window {}", container.id);
+        //         container.unfocus();
 
-
+        //         let current = workspaces.current();
+        //         match current.contain(container.id) {
+        //             Some(i) => {
+        //                 let next = current.next_client(container.id);
+        //                 next.unwrap().focus();
+        //             }
+        //             None => {}
+        //         }
+        //     }
+        //     None => {}
+        // }
+        let current = workspaces.current();
+        current.switch_client();
     }
 }
 
 impl Handler for WindowToWorkspaceHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         let res = workspaces.get_focus(context);
-        match res {
-            Some(window) => {
-                let from = workspaces.current_name();
-                let to = self.key;
-                workspaces.move_window(window, from, to, context);
-            }
-            None => {}
-        }
+
+        // match res {
+        //     Some(container) => {
+        //         let from = workspaces.current_name();
+        //         let to = self.key;
+        //         workspaces.move_window(container.id, from, to, context);
+        //     }
+        //     None => {}
+        // }
     }
 }
 
 impl Handler for WorkspaceHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("handle workspace form {}", workspaces.current_name());
         if !workspaces.contain(self.key) {
-            workspaces.create(self.key, screen_num);
+            workspaces.create(self.key, context.screen_num);
         }
         workspaces.switch_current(self.key, context);
         println!("to {}", workspaces.current_name());
@@ -136,19 +138,19 @@ impl Handler for WorkspaceHandler {
 }
 
 impl Handler for ExecHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("handle exec");
         self.cmd.spawn();
     }
 }
 
 impl Handler for LayoutHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context, screen_num: libc::c_int) {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("handle layout");
         let current = workspaces.current();
         let t = self.layout_type.clone();
         current.change_layout(t);
-        current.config(context);
+        current.update();
     }
 }
 

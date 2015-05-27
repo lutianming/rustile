@@ -3,7 +3,8 @@ extern crate libc;
 use x11::xlib;
 
 use super::super::libx;
-use super::Window;
+use super::container::{self, Container};
+
 
 const CWX: libc::c_uint = 1<<0;
 const CWY: libc::c_uint = 1<<1;
@@ -15,7 +16,7 @@ const CWStackMode: libc::c_uint = 1<<6;
 
 
 pub trait Layout {
-    fn configure(&self, windows: &[Window], context: libx::Context,screen_num: libc::c_int);
+    fn configure(&self, container: &Container);
     fn toggle(&mut self) {}
     fn get_type(&self) -> Type;
 }
@@ -49,21 +50,17 @@ impl TabLayout {
 }
 impl Layout for TabLayout {
     fn get_type(&self) -> Type { Type::Tab }
-    fn configure(&self, windows: &[Window], context: libx::Context, screen_num: libc::c_int) {
-        let size = windows.len();
+    fn configure(&self, container: &Container) {
+        let size = container.clients.len();
         if size == 0{
             return;
         }
 
-        let window = windows[0];
+        let attrs = libx::get_window_attributes(container.context, container.id);
 
-        let screen_height = libx::display_height(context, screen_num);
-        let screen_width = libx::display_width(context, screen_num);
-
-        let width = screen_width;
-        let height = screen_height;
-
-        window.configure(0, 0, width, height);
+        for client in container.clients.iter() {
+            client.configure(0, 0, attrs.width as usize, attrs.height as usize);
+        }
     }
 }
 
@@ -85,24 +82,22 @@ impl Layout for TilingLayout {
         }
     }
     /// once we add or remove a window, we need to reconfig
-    fn configure(&self, windows: &[Window], context: libx::Context,screen_num: libc::c_int) {
-        let size = windows.len();
+    fn configure(&self, container: &Container) {
+        let size = container.clients.len();
         if size == 0 {
             return;
         }
-        let screen_height = libx::display_height(context, screen_num);
-        let screen_width = libx::display_width(context, screen_num);
 
-        let mask = CWX | CWY | CWHeight | CWWidth;
+        let attrs = libx::get_window_attributes(container.context, container.id);
 
-        let width = screen_width  / size as libc::c_int;
-        let height = screen_height / size as libc::c_int;
-        println!("screen width {} height {}", screen_width, screen_height);
-        for (i, window) in windows.iter().enumerate() {
+        let width = attrs.width  / size as libc::c_int;
+        let height = attrs.height / size as libc::c_int;
+
+        for (i, client) in container.clients.iter().enumerate() {
             let mut x = 0;
             let mut y = 0;
-            let mut w = screen_width;
-            let mut h = screen_height;
+            let mut w = attrs.width;
+            let mut h = attrs.height;
 
             match self.direction {
                 Direction::Vertical => {
@@ -115,8 +110,7 @@ impl Layout for TilingLayout {
                 }
                 _ => {}
             };
-            println!("{} {} {} {} {}", window.id, x, y,  w, h);
-            window.configure(x, y, w, h);
+            client.configure(x, y+container.titlebar_height as i32, w as usize, h as usize);
         }
     }
 }

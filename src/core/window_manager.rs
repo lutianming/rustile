@@ -1,11 +1,12 @@
 extern crate libc;
 
 use x11::xlib;
+use x11::xlib::Window;
 use super::super::libx;
 
 use super::config::Config;
-use super::Window;
-use super::{ Workspace, Workspaces };
+use super::Container;
+use super::Workspaces;
 use super::handler;
 
 unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XErrorEvent) -> libc::c_int {
@@ -20,37 +21,31 @@ unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XE
 
 pub struct WindowManager {
     pub context: libx::Context,
-    pub screen_num: libc::c_int,
-    pub root:    xlib::Window,
-
     pub workspaces: Workspaces,
     config: Config
 }
 
 impl WindowManager {
     pub fn new() -> WindowManager {
-	let context = libx::open_display(None);
-        let context = match context {
-            Some(p) => {
-                p
+	let res = libx::open_display(None);
+        let mut context = match res {
+            Some(c) => {
+                c
             }
             None => {
                 panic!("can't open display")
             }
         };
 
-	let screen_num  = libx::default_screen(context);
-	let root = libx::root_window(context, screen_num);
-        println!("root window {}", root);
+	context.screen_num  = libx::default_screen(context);
+	context.root = libx::root_window(context, context.screen_num);
+
 	let mut wm = WindowManager {
             context: context,
-            screen_num: screen_num,
-	    root: root,
-
             config: Config::load(),
-            workspaces: Workspaces::new()
+            workspaces: Workspaces::new(context)
         };
-        wm.workspaces.create('1', screen_num);
+        wm.workspaces.create('1', context.screen_num);
         wm.workspaces.get('1').unwrap().visible = true;
         wm.workspaces.switch_current('1', context);
         wm
@@ -66,13 +61,13 @@ impl WindowManager {
         }
 
         let attrs = libx::get_window_attributes(self.context, event.window);
-
+        println!("{} attr {} {}", event.window, attrs.width, attrs.height);
         // get window property
-        // let n = libx::get_text_property(self.context, event.window, xlib::XA_WM_NAME);
-        // match n {
-        //     Some(s) => {debug!("create window {} for {}", event.window, s);}
-        //     None => {}
-        // }
+        let n = libx::get_text_property(self.context, event.window, xlib::XA_WM_NAME);
+        match n {
+            Some(s) => {debug!("create window {} for {}", event.window, s);}
+            None => {}
+        }
 
         // let atoms = libx::get_wm_protocols(self.context, event.window);
         // for a in atoms.iter() {
@@ -86,40 +81,39 @@ impl WindowManager {
     }
 
     pub fn handle_destroy(&mut self, event: &xlib::XDestroyWindowEvent) {
-        let window = Window::new(self.context, event.window);
-        self.workspaces.remove_window(window, self.context);
+        self.workspaces.remove_window(event.window, self.context);
         if self.workspaces.get_focus(self.context).is_none() {
-            libx::set_input_focus(self.context, self.root);
+            libx::set_input_focus(self.context, self.context.root);
         }
     }
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
         // add app top-level window to workspace
-        let window = Window::new(self.context, event.window);
-        let manage = window.can_manage();
+        // let window = Window::new(self.context, event.window);
+        let manage = Workspaces::can_manage(self.context, event.window);
 
         if manage {
             debug!("top level window");
-
+            let container = Container::from_id(self.context, event.window);
             // change attributes before display
             let mask = 0x420010;
             let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
-            libx::select_input(self.context, window.id, mask);
+            libx::select_input(self.context, container.id, mask);
 
             if self.config.titlebar_height > 0 {
-                let parent = Window::decorate(self.context, event.window);
+                let mut parent = Container::new(self.context, Some(self.context.root));
+                parent.titlebar_height = 20;
+                parent.add(container);
                 parent.map();
-                self.workspaces.add_window(parent, None, self.context);
+                self.workspaces.add_window(parent, None);
             }else {
-                window.map();
-                self.workspaces.add_window(window, None, self.context);
+                container.map();
+                self.workspaces.add_window(container, None);
             };
         }
         else {
-            let window = Window::new(self.context, event.window);
-            window.map();
+            libx::map_window(self.context, event.window);
         }
-
     }
 
     pub fn handle_client_message(&mut self, event: &xlib::XClientMessageEvent) {
@@ -175,7 +169,7 @@ impl WindowManager {
 
             match self.config.bindsyms.get_mut(&b) {
                 Some(handler) => {
-                    handler.handle(&mut self.workspaces, self.context, self.screen_num);
+                    handler.handle(&mut self.workspaces, self.context);
                 }
                 None => {
                     println!("no bind");
@@ -189,8 +183,8 @@ impl WindowManager {
         match event.atom {
             usertime => {
                 debug!("_NET_WM_USER_TIME");
-                let window = Window::new(self.context, event.window);
-                self.workspaces.set_focus(window, self.context);
+                // let window = Window::new(self.context, event.window);
+                self.workspaces.set_focus(event.window, self.context);
             }
         }
     }
@@ -218,8 +212,7 @@ impl WindowManager {
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
         if event.focus == 0 {
-            let w = Window::new(self.context, event.window);
-            self.workspaces.set_focus(w, self.context);
+            self.workspaces.set_focus(event.window, self.context);
         }
     }
 
@@ -322,19 +315,17 @@ impl WindowManager {
             // xlib::XSetErrorHandler(Some(error_handler));
         }
         let left_ptr: u32 = 68;
-        libx::define_cursor(self.context, self.root, left_ptr);
+        libx::define_cursor(self.context, self.context.root, left_ptr);
 
 
-        libx::ungrab_button(self.context, 0, 0x8000, self.root);
-        libx::select_input(self.context, self.root,
+        libx::ungrab_button(self.context, 0, 0x8000, self.context.root);
+        libx::select_input(self.context, self.context.root,
                            mask);
 
         for bind in self.config.bindsyms.keys() {
             let code = libx::keysym_to_keycode(self.context, bind.key);
-            libx::grab_key(self.context, code, bind.mask, self.root);
+            libx::grab_key(self.context, code, bind.mask, self.context.root);
         }
-        // let anymodifier = 1 << 15;
-        // libx::grab_button(self.context, 0, anymodifier, self.root);
         libx::sync(self.context, 0);
     }
 }

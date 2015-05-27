@@ -2,21 +2,24 @@ extern crate x11;
 extern crate libc;
 
 use std::collections::HashMap;
-use super::Window;
-use super::Workspace;
+// use super::Window;
+use x11::xlib::{Window};
+use super::Container;
 use super::super::libx;
 use super::super::libx::{ Context };
 
 
 pub struct Workspaces {
     current: char,
-    pub spaces: HashMap<char, Workspace>,
+    context: Context,
+    pub spaces: HashMap<char, Container>,
 }
 
 impl Workspaces {
-    pub fn new() -> Workspaces {
+    pub fn new(context: Context) -> Workspaces {
         Workspaces {
             current: '1',
+            context: context,
             spaces: HashMap::new(),
         }
     }
@@ -26,7 +29,7 @@ impl Workspaces {
     }
 
     pub fn create(&mut self, key: char, screen_num: libc::c_int) {
-        let space = Workspace::new(screen_num);
+        let space = Container::from_id(self.context, self.context.root);
         self.spaces.insert(key, space);
     }
 
@@ -34,11 +37,11 @@ impl Workspaces {
         self.spaces.remove(&key);
     }
 
-    pub fn get(&mut self, key: char) -> Option<&mut Workspace>{
+    pub fn get(&mut self, key: char) -> Option<&mut Container>{
         self.spaces.get_mut(&key)
     }
 
-    pub fn current(&mut self) -> &mut Workspace {
+    pub fn current(&mut self) -> &mut Container {
         self.spaces.get_mut(&self.current).unwrap()
     }
 
@@ -65,19 +68,25 @@ impl Workspaces {
 
         match self.get(old) {
             Some(v) => {
-                v.hide();
-                v.config(context);
+                v.unmap();
+                v.update();
             }
             None => {}
         }
 
         match self.get(new) {
             Some(v) => {
-                v.show(context);
-                v.config(context);
+                v.map();
+                v.update();
             }
             None => {}
         }
+    }
+
+    pub fn can_manage(context: libx::Context, id: Window) -> bool {
+        let attrs = libx::get_window_attributes(context, id);
+        let transientfor_hint = libx::get_transient_for_hint(context, id);
+        attrs.override_redirect == 0 && transientfor_hint == 0
     }
 
     pub fn move_window(&mut self, window: Window, from: char, to: char, context: Context){
@@ -94,50 +103,56 @@ impl Workspaces {
             self.create(to, s);
         }
 
-        match self.get(from) {
-            Some(w) => { w.remove(window, context);}
-            None => {}
-        }
+        let res = match self.get(from) {
+            Some(w) => { w.remove(window) }
+            None => { None }
+        };
 
         match self.get(to) {
-            Some(w) => { w.add(window, context);}
+            Some(w) => {
+                if res.is_some(){
+                    w.add(res.unwrap());
+                }
+            }
             None => {}
         }
     }
 
-    pub fn add_window(&mut self, window: Window, workspace: Option<char>, context: Context) {
+    pub fn add_window(&mut self, container: Container, workspace: Option<char>) {
         match workspace {
             Some(k) => {
                 match self.get(k) {
                     Some(w) => {
-                        w.add(window, context);
-                        w.config(context);
+                        w.add(container);
+                        w.update();
                     }
                     None => {}
                 }
             }
             None => {
                 // use current workspace
-                let c = self.current();
-                c.add(window, context);
-                c.config(context);
+                let current = self.current();
+                current.add(container);
+                current.update();
+                current.print_tree(0);
             }
         }
-        debug!("add window {}", window.id);
     }
 
     pub fn remove_window(&mut self, window: Window, context: Context) {
-        // let c = self.current();
-        // if c.remove(window, context) {
-        //     return
-        // }
-
         for (k, workspace) in self.spaces.iter_mut() {
-            let res =  workspace.remove(window, context);
+            let res =  workspace.remove(window);
             match res {
                 Some(w) => {
-                    w.destroy();
-                    workspace.config(context);
+                    if w.pid.is_some() {
+                        let res = workspace.remove(w.pid.unwrap());
+                        if res.is_some(){
+                            res.unwrap().destroy();
+                        };
+                    }
+
+                    workspace.update();
+                    workspace.print_tree(0);
                     return;
                 }
                 None => {
@@ -148,32 +163,43 @@ impl Workspaces {
     }
 
     pub fn set_focus(&mut self, window: Window, context: Context) {
-        let res = self.get_focus(context);
-        match res {
+        match self.get_focus(context) {
             Some(w) => {
                 w.unfocus();
             }
             None => {}
         }
 
-        let res = self.find_window(window);
-        match res {
-            Some((k, index)) => {
-                self.get(k).unwrap().get(index).focus();
+        match self.get_container(window) {
+            Some(c) => {
+                c.focus()
             }
             None => {}
         }
     }
 
-    pub fn get_focus(&mut self, context: Context) -> Option<Window> {
+    pub fn get_focus(&mut self, context: Context) -> Option<&Container> {
         let (w, _) = libx::get_input_focus(context);
-        let res = self.find_window(Window::new(context, w));
+        let res = self.find_window(w);
         match res {
             Some((k, index)) => {
-                Some(self.get(k).unwrap().get(index))
+                self.get(k).unwrap().get(index)
             }
             None => { None }
         }
+    }
+
+    pub fn get_container(&self, id: Window) -> Option<&Container>{
+        for (k, w) in self.spaces.iter() {
+            let index = w.contain(id);
+            match index {
+                Some(i) => {
+                    return w.get(i)
+                }
+                None => {}
+            }
+        }
+        None
     }
 
     pub fn find_window(&self, window: Window) -> Option<(char, usize)> {
