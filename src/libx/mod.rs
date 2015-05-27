@@ -17,7 +17,8 @@ use libc::{ c_int, c_long, c_uint, c_ulong, c_void };
 #[derive(Debug, Copy, Clone)]
 pub struct Context {
     pub display: *mut Display,
-
+    pub screen_num: c_int,
+    pub root: Window,
 }
 
 pub fn open_display(name: Option<&str>) -> Option<Context> {
@@ -39,6 +40,8 @@ pub fn open_display(name: Option<&str>) -> Option<Context> {
             // b
             let c = Context {
                 display: display,
+                screen_num: 0,
+                root: 0,
             };
             Some(c)
         }
