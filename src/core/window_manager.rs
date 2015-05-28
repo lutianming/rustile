@@ -81,20 +81,21 @@ impl WindowManager {
     }
 
     pub fn handle_destroy(&mut self, event: &xlib::XDestroyWindowEvent) {
-        self.workspaces.remove_window(event.window, self.context);
-        if self.workspaces.get_focus(self.context).is_none() {
-            libx::set_input_focus(self.context, self.context.root);
+        self.workspaces.remove_window(event.window);
+        if self.workspaces.get_focus().is_none() {
+            self.workspaces.set_focus(self.context.root);
         }
     }
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
+
         // add app top-level window to workspace
         // let window = Window::new(self.context, event.window);
         let manage = Workspaces::can_manage(self.context, event.window);
 
         if manage {
             debug!("top level window");
-            let container = Container::from_id(self.context, event.window);
+            let mut container = Container::from_id(self.context, event.window);
             container.map();
             container.focus();
             // change attributes before display
@@ -155,7 +156,7 @@ impl WindowManager {
     pub fn handle_button_motion(&mut self, event: &xlib::XMotionEvent) {
         let (window, _) = libx::get_input_focus(self.context);
         if window != event.window {
-            libx::set_input_focus(self.context, window);
+            self.workspaces.set_focus(event.window);
         }
     }
 
@@ -185,7 +186,7 @@ impl WindowManager {
             usertime => {
                 debug!("_NET_WM_USER_TIME");
                 // let window = Window::new(self.context, event.window);
-                self.workspaces.set_focus(event.window, self.context);
+                self.workspaces.set_focus(event.window);
             }
         }
     }
@@ -206,14 +207,12 @@ impl WindowManager {
     }
 
     pub fn handle_focus_in(&mut self, event: &xlib::XFocusChangeEvent) {
-        libx::set_input_focus(self.context, event.window);
-        let (window, _) = libx::get_input_focus(self.context);
-        println!("window {}", window);
+        self.workspaces.set_focus(event.window);
       }
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
         if event.focus == 0 {
-            self.workspaces.set_focus(event.window, self.context);
+            self.workspaces.set_focus(event.window);
         }
     }
 
