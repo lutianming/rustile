@@ -259,51 +259,6 @@ impl Container {
         let (x, _) = libx::get_input_focus(self.context);
 
     }
-
-    pub fn decorate(&self) {
-        let attrs = libx::get_window_attributes(self.context, self.id);
-        let screen = self.context.screen_num;
-        let root = self.context.root;
-        let display = self.context.display;
-        let mut values: xlib::XGCValues = unsafe{ mem::zeroed() };
-        // let gc = libx::create_gc(self.context, self.id, 0, values);
-        let gc = libx::default_gc(self.context, screen);
-
-
-        unsafe {
-            let black = xlib::XBlackPixel(self.context.display, screen);
-            let white = xlib::XWhitePixel(self.context.display, screen);
-
-            xlib::XSetLineAttributes(self.context.display, gc, 5, 0, 0, 0);
-
-            let cmap = xlib::XDefaultColormap(self.context.display, screen);
-            let mut color: xlib::XColor = mem::zeroed();
-            let name = ffi::CString::new("blue").unwrap().as_ptr();
-            let r = xlib::XParseColor(self.context.display, cmap, name, &mut color);
-            xlib::XAllocColor(self.context.display, cmap, &mut color);
-
-            let (focus_id,_) = libx::get_input_focus(self.context);
-            // try draw rectangle
-            if focus_id == self.id || self.contain(focus_id).is_some(){
-                xlib::XSetBackground(self.context.display, gc,
-                                     black);
-                xlib::XSetForeground(self.context.display, gc,
-                                     color.pixel);
-            }
-            else {
-                xlib::XSetBackground(self.context.display, gc,
-                                     black);
-                xlib::XSetForeground(self.context.display, gc,
-                                     black);
-            }
-            let r = xlib::XFillRectangle(self.context.display,
-                                         self.id, gc,
-                                         1, 1,
-                                         attrs.width as libc::c_uint,
-                                         TITLE_HEIGHT as libc::c_uint);
-        }
-    }
-
 }
 
 // #[test]
