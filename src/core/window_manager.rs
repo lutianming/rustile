@@ -95,6 +95,8 @@ impl WindowManager {
         if manage {
             debug!("top level window");
             let container = Container::from_id(self.context, event.window);
+            container.map();
+            container.focus();
             // change attributes before display
             let mask = 0x420010;
             let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
@@ -107,7 +109,6 @@ impl WindowManager {
                 parent.map();
                 self.workspaces.add_window(parent, None);
             }else {
-                container.map();
                 self.workspaces.add_window(container, None);
             };
         }
