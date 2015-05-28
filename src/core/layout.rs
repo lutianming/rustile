@@ -72,9 +72,8 @@ fn decorate(container: &Container, client: &Container, x: i32, y: i32, width: us
             }
         let r = xlib::XFillRectangle(context.display,
                                      container.id, gc,
-                                     1, 1,
-                                     attrs.width as libc::c_uint,
-                                     container.titlebar_height as libc::c_uint);
+                                     x, y,
+                                     width as u32, height as u32);
         }
 }
 
@@ -113,9 +112,9 @@ impl Layout for TabLayout {
             decorate(container, client,
                      0, width*i as i32,
                      width as usize,
-                     container.titlebar_height as usize);
+                     client.titlebar_height as usize);
             if focus_id == client.id {
-                client.configure(0, 0, attrs.width as usize, attrs.height as usize);
+                client.configure(0, client.titlebar_height as i32, attrs.width as usize, (attrs.height-client.titlebar_height as i32) as usize);
                 client.map();
             }
             else{
@@ -175,8 +174,10 @@ impl Layout for TilingLayout {
             decorate(container, client,
                      x, y,
                      w as usize,
-                     container.titlebar_height as usize);
-            client.configure(x, y+container.titlebar_height as i32, w as usize, h as usize);
+                     client.titlebar_height as usize);
+            h = h - client.titlebar_height as i32;
+            client.configure(x, y+client.titlebar_height as i32, w as usize, h as usize);
+            client.map();
         }
     }
 }

@@ -104,14 +104,9 @@ impl WindowManager {
             libx::select_input(self.context, container.id, mask);
 
             if self.config.titlebar_height > 0 {
-                let mut parent = Container::new(self.context, Some(self.context.root));
-                parent.titlebar_height = 20;
-                parent.add(container);
-                parent.map();
-                self.workspaces.add_window(parent, None);
-            }else {
-                self.workspaces.add_window(container, None);
-            };
+                container.titlebar_height = self.config.titlebar_height as usize;
+            }
+            self.workspaces.add_window(container, None);
         }
         else {
             libx::map_window(self.context, event.window);
