@@ -105,6 +105,13 @@ impl Container {
         self.clients.push(client);
     }
 
+    pub fn insert(&mut self, index: usize,  mut client: Container) {
+        if client.pid.is_none() || client.pid.unwrap() != self.id {
+            libx::reparent(self.context, client.id, self.id, 0, 0);
+            client.pid = Some(self.id);
+        }
+        self.clients.insert(index, client);
+    }
     pub fn remove(&mut self, id: xlib::Window) -> Option<Container>{
         let res = self.contain(id);
         match res {
@@ -127,6 +134,40 @@ impl Container {
     pub fn get(&self, index: usize) -> Option<&Container> {
         self.clients.get(index)
     }
+
+    pub fn get_parent(&self, id: xlib::Window) -> Option<&Container> {
+        if self.contain(id).is_some() {
+            Some(self)
+        }
+        else if self.size() == 0 {
+            None
+        }
+        else {
+            for client in self.clients.iter(){
+                let r = client.get_parent(id);
+                if r.is_some() {
+                    return r
+                }
+            }
+            None
+        }
+    }
+
+    pub fn tree_search(&self, id: xlib::Window) -> Option<&Container>{
+        match self.contain(id) {
+            Some(index) => { self.get(index) }
+            None => {
+                for client in self.clients.iter() {
+                    let r = client.tree_search(id);
+                    if r.is_some(){
+                        return r
+                    }
+                }
+                None
+            }
+        }
+    }
+
     pub fn contain(&self, id: xlib::Window) -> Option<usize>{
         self.clients.iter().position(|x| (*x).id == id)
     }

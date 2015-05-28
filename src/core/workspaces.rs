@@ -139,7 +139,7 @@ impl Workspaces {
         }
     }
 
-    pub fn remove_window(&mut self, window: Window, context: Context) {
+    pub fn remove_window(&mut self, window: Window, context: Context) -> Option<Container>{
         for (k, workspace) in self.spaces.iter_mut() {
             let res =  workspace.remove(window);
             match res {
@@ -153,13 +153,14 @@ impl Workspaces {
 
                     workspace.update();
                     workspace.print_tree(0);
-                    return;
+                    return Some(w)
                 }
                 None => {
 
                 }
             }
         }
+        None
     }
 
     pub fn set_focus(&mut self, window: Window, context: Context) {
@@ -171,7 +172,7 @@ impl Workspaces {
         }
 
         match self.get_container(window) {
-            Some(c) => {
+            Some((_, c)) => {
                 c.focus()
             }
             None => {}
@@ -180,38 +181,35 @@ impl Workspaces {
 
     pub fn get_focus(&mut self, context: Context) -> Option<&Container> {
         let (w, _) = libx::get_input_focus(context);
-        let res = self.find_window(w);
+        let res = self.get_container(w);
         match res {
-            Some((k, index)) => {
-                self.get(k).unwrap().get(index)
+            Some((k, c)) => {
+                Some(c)
             }
             None => { None }
         }
     }
 
-    pub fn get_container(&self, id: Window) -> Option<&Container>{
+    pub fn get_container(&self, id: Window) -> Option<(char, &Container)>{
         for (k, w) in self.spaces.iter() {
-            let index = w.contain(id);
-            match index {
-                Some(i) => {
-                    return w.get(i)
-                }
-                None => {}
+            let r = w.tree_search(id);
+            if r.is_some(){
+                return Some((*k, r.unwrap()))
             }
         }
         None
     }
 
-    pub fn find_window(&self, window: Window) -> Option<(char, usize)> {
-        for (k, w) in self.spaces.iter() {
-            let index = w.contain(window);
-            match index {
-                Some(i) => {
-                    return Some((*k, i))
-                }
-                None => {}
-            }
-        }
-        None
-    }
+    // pub fn find_window(&self, window: Window) -> Option<(char, usize)> {
+    //     for (k, w) in self.spaces.iter() {
+    //         let index = w.contain(window);
+    //         match index {
+    //             Some(i) => {
+    //                 return Some((*k, i))
+    //             }
+    //             None => {}
+    //         }
+    //     }
+    //     None
+    // }
 }
