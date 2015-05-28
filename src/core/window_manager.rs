@@ -45,9 +45,6 @@ impl WindowManager {
             config: Config::load(),
             workspaces: Workspaces::new(context)
         };
-        wm.workspaces.create('1');
-        wm.workspaces.get('1').unwrap().visible = true;
-        wm.workspaces.switch_current('1', context);
         wm
     }
 
@@ -322,5 +319,13 @@ impl WindowManager {
             libx::grab_key(self.context, code, bind.mask, self.context.root);
         }
         libx::sync(self.context, 0);
+
+        self.init_workspaces();
+    }
+
+    fn init_workspaces(&mut self) {
+        self.workspaces.create('1');
+        self.workspaces.get('1').unwrap().visible = true;
+        self.workspaces.switch_current('1', self.context);
     }
 }
