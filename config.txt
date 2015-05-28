@@ -1,7 +1,10 @@
 set $mod Mod4
 
-bind $mod+c exec dmenu_run
-bind $mod+b layout split
+bind $mod+d exec dmenu_run
+
+bind $mod+w layout tab
+bind $mod+e layout split
+bind $mod+f fullscreen
 
 bind $mod+1 workspace 1
 bind $mod+2 workspace 2
@@ -13,7 +16,6 @@ bind $mod+5 focus left
 bind $mod+6 focus right
 
 bind $mod+7 kill
-
-bind $mod+Shift+c exec dmenu_run
+bind $mod+v split
 
 exec pwd
