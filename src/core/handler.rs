@@ -8,6 +8,7 @@ use std::boxed::Box;
 use x11::xlib;
 use super::WindowManager;
 use super::Workspaces;
+use super::container;
 use super::layout;
 use super::super::libx;
 use super::super::libx::Context;
@@ -58,6 +59,7 @@ pub struct LayoutHandler {
     layout_type: layout::Type,
 }
 
+pub struct FullscreenHandler;
 /// switch to another workspace
 pub struct WorkspaceHandler {
     pub key: char,
@@ -126,6 +128,41 @@ impl Handler for WindowToWorkspaceHandler {
     }
 }
 
+impl Handler for FullscreenHandler {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+        debug!("fullscreen");
+
+        let mut current = workspaces.current();
+        match current.mode {
+            container::Mode::Normal => {
+                current.mode = container::Mode::Fullscreen;
+                let (focus_id,_) = libx::get_input_focus(context);
+                println!("fullscreen {} {}", focus_id, context.root);
+                libx::reparent(context, focus_id, context.root, 0, 0);
+
+                let width = libx::display_width(context, context.screen_num);
+                let height = libx::display_height(context, context.screen_num);
+                libx::resize_window(context, focus_id, 0, 0,
+                                    width as usize,
+                                    height as usize);
+            }
+            container::Mode::Fullscreen => {
+                current.mode = container::Mode::Normal;
+                let (focus_id,_) = libx::get_input_focus(context);
+                println!("exit fullscreen {}", focus_id);
+                let parent = current.get_parent(focus_id);
+                let id = match parent {
+                    Some(p) => {p.id}
+                    None => {context.root}
+                };
+                libx::reparent(context, focus_id, id, 0, 0);
+                if parent.is_some() {
+                    parent.unwrap().update();
+                }
+            }
+        }
+    }
+}
 impl Handler for WorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("handle workspace form {}", workspaces.current_name());

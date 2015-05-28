@@ -21,12 +21,18 @@ const CWStackMode: libc::c_uint = 1<<6;
 
 pub const TITLE_HEIGHT: libc::c_int = 20;
 
+pub enum Mode {
+    Normal,
+    Fullscreen,
+}
+
 pub struct Container {
     pub id: xlib::Window,
     pub visible: bool,
     pub titlebar_height: usize,
     pub pid: Option<xlib::Window>,
     pub clients: Vec<Container>,
+    pub mode: Mode,
     pub context: libx::Context,
     layout: Box<layout::Layout>,
 }
@@ -67,6 +73,7 @@ impl Container {
             pid: None,
             visible: false,
             id: id,
+            mode: Mode::Normal,
             titlebar_height: 0,
             layout: Box::new(layout::TilingLayout::new(layout::Direction::Horizontal))
         }

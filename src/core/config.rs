@@ -21,8 +21,8 @@ use super::handler::{
     WorkspaceHandler,
     WindowToWorkspaceHandler,
     WindowFocusHandler,
-    WindowCloseHandler};
-
+    WindowCloseHandler,
+    FullscreenHandler};
 
 pub struct Config {
     mod_key: u32,
@@ -131,6 +131,10 @@ impl Config {
                     }
                     _ => {}
                 }
+            }
+            "fullscreen" => {
+                let handler = FullscreenHandler;
+                self.bindsyms.insert(bind, Box::new(handler));
             }
             "workspace" => {
                 println!("workspace");
