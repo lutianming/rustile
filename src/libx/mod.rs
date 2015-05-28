@@ -27,6 +27,12 @@ pub struct Context {
     pub display: *mut Display,
     pub screen_num: c_int,
     pub root: Window,
+
+    pub gc: xlib::GC,
+    pub focus_bg: c_ulong,
+    pub focus_fg: c_ulong,
+    pub unfocus_bg: c_ulong,
+    pub unfocus_fg: c_ulong,
 }
 
 pub fn open_display(name: Option<&str>) -> Option<Context> {
@@ -43,15 +49,9 @@ pub fn open_display(name: Option<&str>) -> Option<Context> {
             None
         }
         else{
-            // let b = Some(Box::<Display>::new(*display));
-            // xlib::XFree(display as *mut libc::c_void);
-            // b
-            let c = Context {
-                display: display,
-                screen_num: 0,
-                root: 0,
-            };
-            Some(c)
+            let mut context: Context = mem::zeroed();
+            context.display = display;
+            Some(context)
         }
     }
 }

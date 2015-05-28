@@ -19,6 +19,36 @@ unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XE
     1
 }
 
+fn load_resource(mut context: &mut libx::Context) {
+    use std::mem;
+    use std::ffi;
+    let screen = context.screen_num;
+    let root = context.root;
+    let display = context.display;
+    let mut values: xlib::XGCValues = unsafe{ mem::zeroed() };
+    // let gc = libx::create_gc(self.context, self.id, 0, values);
+    let gc = libx::default_gc(*context, screen);
+
+    unsafe {
+        let black = xlib::XBlackPixel(display, screen);
+        let white = xlib::XWhitePixel(display, screen);
+
+        xlib::XSetLineAttributes(display, gc, 5, 0, 0, 0);
+
+        let cmap = xlib::XDefaultColormap(display, screen);
+        let mut color: xlib::XColor = mem::zeroed();
+        let name = ffi::CString::new("blue").unwrap().as_ptr();
+        let r = xlib::XParseColor(display, cmap, name, &mut color);
+        xlib::XAllocColor(display, cmap, &mut color);
+
+        context.gc = gc;
+        context.focus_bg = black;
+        context.focus_fg = color.pixel;
+        context.unfocus_bg = black;
+        context.unfocus_fg = black;
+    }
+}
+
 pub struct WindowManager {
     pub context: libx::Context,
     pub workspaces: Workspaces,
@@ -39,6 +69,7 @@ impl WindowManager {
 
 	context.screen_num  = libx::default_screen(context);
 	context.root = libx::root_window(context, context.screen_num);
+        load_resource(&mut context);
 
 	let mut wm = WindowManager {
             context: context,

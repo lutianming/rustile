@@ -33,48 +33,50 @@ pub enum Direction {
     Right,
 }
 
-fn decorate(container: &Container, client: &Container, x: i32, y: i32, width: usize, height: usize) {
-    let context = container.context;
-    let attrs = libx::get_window_attributes(context, container.id);
-    let screen = context.screen_num;
-    let root = context.root;
-    let display = context.display;
-    let mut values: xlib::XGCValues = unsafe{ mem::zeroed() };
-    // let gc = libx::create_gc(self.context, self.id, 0, values);
-    let gc = libx::default_gc(context, screen);
+fn decorate_focus(pid: xlib::Window, client: &Container, x: i32, y: i32, width: usize, height: usize) {
+    let context = client.context;
+    let gc = context.gc;
+    unsafe{
+        xlib::XSetBackground(context.display, gc,
+                             context.focus_bg);
+        xlib::XSetForeground(context.display, gc,
+                             context.focus_fg);
 
-
-    unsafe {
-        let black = xlib::XBlackPixel(context.display, screen);
-        let white = xlib::XWhitePixel(context.display, screen);
-
-        xlib::XSetLineAttributes(context.display, gc, 5, 0, 0, 0);
-
-        let cmap = xlib::XDefaultColormap(context.display, screen);
-        let mut color: xlib::XColor = mem::zeroed();
-        let name = ffi::CString::new("blue").unwrap().as_ptr();
-        let r = xlib::XParseColor(context.display, cmap, name, &mut color);
-        xlib::XAllocColor(context.display, cmap, &mut color);
-
-        let (focus_id,_) = libx::get_input_focus(context);
-        // try draw rectangle
-        if focus_id == client.id {
-            xlib::XSetBackground(context.display, gc,
-                                 black);
-            xlib::XSetForeground(context.display, gc,
-                                 color.pixel);
-        }
-        else {
-            xlib::XSetBackground(context.display, gc,
-                                 black);
-            xlib::XSetForeground(context.display, gc,
-                                 black);
-            }
         let r = xlib::XFillRectangle(context.display,
-                                     container.id, gc,
+                                     pid, gc,
                                      x, y,
                                      width as u32, height as u32);
-        }
+    }
+
+}
+
+fn decorate_unfocus(pid: xlib::Window, client: &Container, x: i32, y: i32, width: usize, height: usize) {
+    let context = client.context;
+    let gc = context.gc;
+    unsafe {
+        xlib::XSetBackground(context.display, gc,
+                             context.unfocus_bg);
+        xlib::XSetForeground(context.display, gc,
+                             context.unfocus_fg);
+
+        let r = xlib::XFillRectangle(context.display,
+                                     pid, gc,
+                                     x, y,
+                                     width as u32, height as u32);
+    }
+}
+
+fn decorate(pid: xlib::Window, client: &Container, x: i32, y: i32, width: usize, height: usize) {
+    let (focus_id,_) = libx::get_input_focus(client.context);
+    println!("focus id {}, client id {}", focus_id, client.id);
+
+    // try draw rectangle
+    if focus_id == client.id {
+        decorate_focus(pid, client, x, y, width, height);
+    }
+    else {
+        decorate_unfocus(pid, client, x, y, width, height);
+    }
 }
 
 #[derive(PartialEq, Clone)]
@@ -109,7 +111,7 @@ impl Layout for TabLayout {
         let (focus_id,_) = libx::get_input_focus(container.context);
 
         for (i, client) in container.clients.iter().enumerate() {
-            decorate(container, client,
+            decorate(container.id, client,
                      0, width*i as i32,
                      width as usize,
                      client.titlebar_height as usize);
@@ -171,7 +173,7 @@ impl Layout for TilingLayout {
                 _ => {}
             };
 
-            decorate(container, client,
+            decorate(container.id, client,
                      x, y,
                      w as usize,
                      client.titlebar_height as usize);
