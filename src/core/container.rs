@@ -219,24 +219,18 @@ impl Container {
         }
     }
 
-    // pub fn split(&self, index: usize) -> bool {
-    //     let res = self.remove(index);
-    //     match res {
-    //         Some(client) => {
-    //             if client.is_empty() {
-    //                 let container = Container::new(self.context, self);
-    //                 container.add(client);
-    //                 self.clients[index] = container;
-    //                 true
-    //             }
-    //             else{
-    //                 // client is not a leaf node, can't split
-    //                 false
-    //             }
-    //         }
-    //         None => { false }
-    //     }
-    // }
+    pub fn split(&mut self) -> bool {
+        if !self.is_empty() {
+            return false;
+        }
+
+        let mut container = Container::new(self.context, None);
+        let id = self.id;
+        self.id = container.id;
+        container.id = id;
+        self.add(container);
+        true
+    }
 
     pub fn focus(&self) {
         libx::set_input_focus(self.context, self.id);
