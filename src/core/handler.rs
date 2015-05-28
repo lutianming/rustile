@@ -115,7 +115,7 @@ impl Handler for WindowFocusHandler {
 
 impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
-        let res = workspaces.get_focus(context);
+        let res = workspaces.get_focus();
 
         // match res {
         //     Some(container) => {
@@ -167,7 +167,7 @@ impl Handler for WorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("handle workspace form {}", workspaces.current_name());
         if !workspaces.contain(self.key) {
-            workspaces.create(self.key, context.screen_num);
+            workspaces.create(self.key);
         }
         workspaces.switch_current(self.key, context);
         println!("to {}", workspaces.current_name());

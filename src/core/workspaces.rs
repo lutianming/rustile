@@ -28,7 +28,7 @@ impl Workspaces {
         self.spaces.contains_key(&key)
     }
 
-    pub fn create(&mut self, key: char, screen_num: libc::c_int) {
+    pub fn create(&mut self, key: char) {
         let space = Container::from_id(self.context, self.context.root);
         self.spaces.insert(key, space);
     }
@@ -58,12 +58,12 @@ impl Workspaces {
         self.current = new;
 
         if !self.contain(old) {
-            let s = libx::default_screen(context);
-            self.create(old, s);
+            // let s = libx::default_screen(context);
+            self.create(old);
         }
         if !self.contain(new) {
-            let s = libx::default_screen(context);
-            self.create(new, s);
+            // let s = libx::default_screen(context);
+            self.create(new);
         }
 
         match self.get(old) {
@@ -89,18 +89,16 @@ impl Workspaces {
         attrs.override_redirect == 0 && transientfor_hint == 0
     }
 
-    pub fn move_window(&mut self, window: Window, from: char, to: char, context: Context){
+    pub fn move_window(&mut self, window: Window, from: char, to: char){
         if from == to {
             return
         }
 
         if !self.contain(from) {
-            let s = libx::default_screen(context);
-            self.create(from, s);
+            self.create(from);
         }
         if !self.contain(to) {
-            let s = libx::default_screen(context);
-            self.create(to, s);
+            self.create(to);
         }
 
         let res = match self.get(from) {
@@ -139,7 +137,20 @@ impl Workspaces {
         }
     }
 
-    pub fn remove_window(&mut self, window: Window, context: Context) -> Option<Container>{
+    // insert window just next to old focus
+    pub fn insert_window(&mut self, container: Container) {
+        let focused = self.get_focus();
+        match focused {
+            Some(c) => {
+
+            }
+            None => {
+                // self.add_window(container, None);
+            }
+        }
+    }
+
+    pub fn remove_window(&mut self, window: Window) -> Option<Container>{
         for (k, workspace) in self.spaces.iter_mut() {
             let res =  workspace.remove(window);
             match res {
@@ -163,8 +174,8 @@ impl Workspaces {
         None
     }
 
-    pub fn set_focus(&mut self, window: Window, context: Context) {
-        match self.get_focus(context) {
+    pub fn set_focus(&mut self, window: Window) {
+        match self.get_focus() {
             Some(w) => {
                 w.unfocus();
             }
@@ -179,8 +190,8 @@ impl Workspaces {
         }
     }
 
-    pub fn get_focus(&mut self, context: Context) -> Option<&Container> {
-        let (w, _) = libx::get_input_focus(context);
+    pub fn get_focus(&mut self) -> Option<&Container> {
+        let (w, _) = libx::get_input_focus(self.context);
         let res = self.get_container(w);
         match res {
             Some((k, c)) => {

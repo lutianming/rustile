@@ -45,7 +45,7 @@ impl WindowManager {
             config: Config::load(),
             workspaces: Workspaces::new(context)
         };
-        wm.workspaces.create('1', context.screen_num);
+        wm.workspaces.create('1');
         wm.workspaces.get('1').unwrap().visible = true;
         wm.workspaces.switch_current('1', context);
         wm
