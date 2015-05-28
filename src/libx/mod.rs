@@ -14,6 +14,14 @@ use x11::xlib;
 use x11::xlib::{ Display, Window };
 use libc::{ c_int, c_long, c_uint, c_ulong, c_void };
 
+const CWX: libc::c_uint = 1<<0;
+const CWY: libc::c_uint = 1<<1;
+const CWWidth: libc::c_uint = 1<<2;
+const CWHeight: libc::c_uint = 1<<3;
+const CWBorderWidth: libc::c_uint = 1<<4;
+const CWSibling: libc::c_uint =	1<<5;
+const CWStackMode: libc::c_uint = 1<<6;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Context {
     pub display: *mut Display,
@@ -348,6 +356,23 @@ pub fn configure_window(context: Context, window: Window, mask:c_uint, mut chang
         xlib::XConfigureWindow(context.display, window, mask, &mut change);
     }
 }
+
+pub fn resize_window(context: Context, window: Window, x: i32, y: i32, width: usize, height: usize) {
+    println!("resize {}", window);
+    let mask = CWX | CWY | CWHeight | CWWidth;
+
+    let mut change = xlib::XWindowChanges {
+        x: x,
+        y: y,
+        width: width as i32,
+        height: height as i32,
+        border_width: 0,
+        sibling: 0,
+        stack_mode: 0
+    };
+    configure_window(context, window, mask, change);
+}
+
 pub fn map_window(context: Context, window: Window) -> c_int{
     unsafe{
         xlib::XMapWindow(context.display, window)

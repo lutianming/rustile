@@ -2,22 +2,12 @@ extern crate libc;
 extern crate x11;
 
 use x11::xlib;
-use std::ffi;
-use std::ptr;
-use std::mem;
+
 use std::rc::{ Rc, Weak };
 use std::cell::RefCell;
 use std::boxed::Box;
 use super::layout;
 use super::super::libx;
-
-const CWX: libc::c_uint = 1<<0;
-const CWY: libc::c_uint = 1<<1;
-const CWWidth: libc::c_uint = 1<<2;
-const CWHeight: libc::c_uint = 1<<3;
-const CWBorderWidth: libc::c_uint = 1<<4;
-const CWSibling: libc::c_uint =	1<<5;
-const CWStackMode: libc::c_uint = 1<<6;
 
 pub const TITLE_HEIGHT: libc::c_int = 20;
 
@@ -142,19 +132,7 @@ impl Container {
     }
 
     pub fn configure(&self, x: i32, y: i32, width: usize, height: usize) {
-        let mask = CWX | CWY | CWHeight | CWWidth;
-
-        let mut change = xlib::XWindowChanges {
-            x: x,
-            y: y,
-            width: width as i32,
-            height: height as i32,
-            border_width: 0,
-            sibling: 0,
-            stack_mode: 0
-        };
-        libx::configure_window(self.context, self.id, mask, change);
-
+        libx::resize_window(self.context, self.id, x, y, width, height);
         // layout for children clients
         self.update();
     }
