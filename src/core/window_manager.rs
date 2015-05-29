@@ -125,7 +125,7 @@ impl WindowManager {
             debug!("top level window");
             let mut container = Container::from_id(self.context, event.window);
             container.map();
-            container.focus();
+            // container.focus();
             // change attributes before display
             let mask = 0x420010;
             let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
@@ -134,7 +134,7 @@ impl WindowManager {
             if self.config.titlebar_height > 0 {
                 container.titlebar_height = self.config.titlebar_height as usize;
             }
-            self.workspaces.add_window(container, None);
+            self.workspaces.insert_window(container);
         }
         else {
             libx::map_window(self.context, event.window);

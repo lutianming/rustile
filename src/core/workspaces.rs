@@ -114,37 +114,44 @@ impl Workspaces {
     }
 
     pub fn add_window(&mut self, container: Container, workspace: Option<char>) {
-        match workspace {
+        let w = match workspace {
             Some(k) => {
                 match self.get(k) {
-                    Some(w) => {
-                        w.add(container);
-                        w.update_layout();
+                    Some(v) => {
+                        v
                     }
-                    None => {}
+                    None => {
+                        return
+                    }
                 }
             }
             None => {
-                // use current workspace
-                let current = self.current();
-                current.add(container);
-                current.update_layout();
-                current.print_tree(0);
+                self.current()
             }
-        }
+        };
+        w.add(container);
+        w.update_layout();
+        w.print_tree(0);
     }
 
     // insert window just next to old focus
     pub fn insert_window(&mut self, container: Container) {
-        let focused = self.get_focus();
-        match focused {
+        match self.get_focus() {
             Some(c) => {
-
+                match c.get_parent(){
+                    Some(p) => {
+                        let index = p.contain(c.id).unwrap();
+                        p.insert(index+1, container);
+                        p.update_layout();
+                        p.print_tree(0);
+                        return
+                    }
+                    None => {}
+                }
             }
-            None => {
-                // self.add_window(container, None);
-            }
+            None => {}
         }
+        self.add_window(container, None);
     }
 
     pub fn remove_window(&mut self, window: Window) -> Option<Container>{
