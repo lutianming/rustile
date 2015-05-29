@@ -115,51 +115,27 @@ impl Handler for WindowFocusHandler {
 
 impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
-        let res = workspaces.get_focus();
-
-        // match res {
-        //     Some(container) => {
-        //         let from = workspaces.current_name();
-        //         let to = self.key;
-        //         workspaces.move_window(container.id, from, to, context);
-        //     }
-        //     None => {}
-        // }
+        let id = match workspaces.get_focus() {
+            Some(container) => {
+                container.id
+            }
+            None => { return }
+        };
+        let from = workspaces.current_name();
+        let to = self.key;
+        workspaces.move_window(id, from, to);
     }
 }
 
 impl Handler for FullscreenHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
-        debug!("fullscreen");
-
-        let mut current = workspaces.current();
-        match current.mode {
-            container::Mode::Normal => {
-                current.mode = container::Mode::Fullscreen;
-                let (focus_id,_) = libx::get_input_focus(context);
-                println!("fullscreen {} {}", focus_id, context.root);
-                libx::reparent(context, focus_id, context.root, 0, 0);
-
-                let width = libx::display_width(context, context.screen_num);
-                let height = libx::display_height(context, context.screen_num);
-                libx::resize_window(context, focus_id, 0, 0,
-                                    width as usize,
-                                    height as usize);
+        debug!("fullscreen toggle");
+        let focused = workspaces.get_focus();
+        match focused {
+            Some(c) => {
+                c.mode_toggle();
             }
-            container::Mode::Fullscreen => {
-                current.mode = container::Mode::Normal;
-                let (focus_id,_) = libx::get_input_focus(context);
-                println!("exit fullscreen {}", focus_id);
-                let parent = current.get_parent(focus_id);
-                let id = match parent {
-                    Some(p) => {p.id}
-                    None => {context.root}
-                };
-                libx::reparent(context, focus_id, id, 0, 0);
-                if parent.is_some() {
-                    parent.unwrap().update();
-                }
-            }
+            None => {}
         }
     }
 }

@@ -21,6 +21,7 @@ pub struct Container {
     pub visible: bool,
     pub titlebar_height: usize,
     pub pid: Option<xlib::Window>,
+    pub parent: *mut Container,
     pub clients: Vec<Container>,
     pub mode: Mode,
     pub context: libx::Context,
@@ -35,15 +36,8 @@ impl PartialEq for Container {
 
 
 impl Container {
-    pub fn new(context: libx::Context, parent: Option<xlib::Window>) -> Container{
-        let pid = match parent {
-            Some(c) => {
-                c
-            }
-            None => {
-                context.root
-            }
-        };
+    pub fn new(context: libx::Context) -> Container{
+        let pid = context.root;
         let attrs = libx::get_window_attributes(context, pid);
 
         let id = libx::create_window(context, pid,
@@ -52,7 +46,6 @@ impl Container {
                                      attrs.height as libc::c_uint);
         libx::select_input(context, id, xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask);
         let mut c = Container::from_id(context, id);
-        c.pid = Some(pid);
         c
     }
 
@@ -64,6 +57,7 @@ impl Container {
             visible: false,
             id: id,
             mode: Mode::Normal,
+            parent: ptr::null_mut(),
             titlebar_height: 0,
             layout: Box::new(layout::TilingLayout::new(layout::Direction::Horizontal))
         }
@@ -102,6 +96,7 @@ impl Container {
             libx::reparent(self.context, client.id, self.id, 0, 0);
             client.pid = Some(self.id);
         }
+        client.parent = self;
         self.clients.push(client);
     }
 
@@ -110,6 +105,7 @@ impl Container {
             libx::reparent(self.context, client.id, self.id, 0, 0);
             client.pid = Some(self.id);
         }
+        client.parent = self;
         self.clients.insert(index, client);
     }
     pub fn remove(&mut self, id: xlib::Window) -> Option<Container>{
@@ -135,21 +131,12 @@ impl Container {
         self.clients.get(index)
     }
 
-    pub fn get_parent(&self, id: xlib::Window) -> Option<&Container> {
-        if self.contain(id).is_some() {
-            Some(self)
-        }
-        else if self.size() == 0 {
+    pub fn get_parent(&mut self) -> Option<&mut Container> {
+        if self.parent == ptr::null_mut() {
             None
         }
-        else {
-            for client in self.clients.iter(){
-                let r = client.get_parent(id);
-                if r.is_some() {
-                    return r
-                }
-            }
-            None
+        else{
+            Some(unsafe{ &mut *self.parent })
         }
     }
 
@@ -265,7 +252,7 @@ impl Container {
             return false;
         }
 
-        let mut container = Container::new(self.context, None);
+        let mut container = Container::new(self.context);
         let id = self.id;
         self.id = container.id;
         container.id = id;
@@ -294,6 +281,41 @@ impl Container {
         let (x, _) = libx::get_input_focus(self.context);
 
     }
+
+    // fullscreen & normal toggle
+    pub fn mode_toggle(&mut self) {
+        let context = self.context;
+        match self.mode {
+            Mode::Normal => {
+                self.mode = Mode::Fullscreen;
+                println!("fullscreen {} {}", self.id, context.root);
+                libx::reparent(context, self.id, context.root, 0, 0);
+
+                let width = libx::display_width(context, context.screen_num);
+                let height = libx::display_height(context, context.screen_num);
+                libx::resize_window(context, self.id, 0, 0,
+                                    width as usize,
+                                    height as usize);
+            }
+            Mode::Fullscreen => {
+                self.mode = Mode::Normal;
+
+                let id = self.id;
+                match self.get_parent() {
+                    Some(p) => {
+                        let pid = p.id;
+                        libx::reparent(context, id, pid, 0, 0);
+                        p.update_layout();
+                    }
+                    None => {
+                        let pid =  context.root;
+                        libx::reparent(context, id, pid, 0, 0);
+                    }
+                };
+            }
+        }
+    }
+
 }
 
 // #[test]
