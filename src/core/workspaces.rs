@@ -18,7 +18,7 @@ pub struct Workspaces {
 impl Workspaces {
     pub fn new(context: Context) -> Workspaces {
         Workspaces {
-            current: '1',
+            current: '0',
             context: context,
             spaces: HashMap::new(),
         }

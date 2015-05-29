@@ -371,8 +371,6 @@ impl WindowManager {
     }
 
     fn init_workspaces(&mut self) {
-        self.workspaces.create('1');
-        self.workspaces.get('1').unwrap().visible = true;
-        self.workspaces.switch_current('1', self.context);
+        self.workspaces.switch_workspace('1', self.context);
     }
 }
