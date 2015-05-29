@@ -17,6 +17,12 @@ const CWBorderWidth: libc::c_uint = 1<<4;
 const CWSibling: libc::c_uint =	1<<5;
 const CWStackMode: libc::c_uint = 1<<6;
 
+#[derive(Copy, Clone)]
+pub struct Rectangle {
+    pub x: i32,
+    pub y: i32,
+    pub width: usize,
+    pub height: usize,
 }
 
 #[derive(PartialEq, Clone)]
@@ -29,49 +35,73 @@ pub enum Direction {
     Right,
 }
 
-fn decorate_focus(pid: xlib::Window, client: &Container, x: i32, y: i32, width: usize, height: usize) {
+pub fn decorate_focus(client: &Container) {
     let context = client.context;
     let gc = context.gc;
-    unsafe{
-        xlib::XSetBackground(context.display, gc,
-                             context.focus_bg);
-        xlib::XSetForeground(context.display, gc,
-                             context.focus_fg);
 
-        let r = xlib::XFillRectangle(context.display,
-                                     pid, gc,
-                                     x, y,
-                                     width as u32, height as u32);
-    }
+    let pid = match client.get_parent() {
+        Some(p) => { p.id }
+        None => { context.root }
+    };
 
-}
+    match client.titlebar {
+        Some(rec) => {
+            unsafe{
+                xlib::XSetBackground(context.display, gc,
+                                     context.focus_bg);
+                xlib::XSetForeground(context.display, gc,
+                                     context.focus_fg);
 
-fn decorate_unfocus(pid: xlib::Window, client: &Container, x: i32, y: i32, width: usize, height: usize) {
-    let context = client.context;
-    let gc = context.gc;
-    unsafe {
-        xlib::XSetBackground(context.display, gc,
-                             context.unfocus_bg);
-        xlib::XSetForeground(context.display, gc,
-                             context.unfocus_fg);
+                let r = xlib::XFillRectangle(context.display,
+                                             pid, gc,
+                                             rec.x, rec.y,
+                                             rec.width as u32,
+                                             rec.height as u32);
+            }
 
-        let r = xlib::XFillRectangle(context.display,
-                                     pid, gc,
-                                     x, y,
-                                     width as u32, height as u32);
+        }
+        None => {}
     }
 }
 
-fn decorate(pid: xlib::Window, client: &Container, x: i32, y: i32, width: usize, height: usize) {
+pub fn decorate_unfocus(client: &Container) {
+    let context = client.context;
+    let gc = context.gc;
+
+    let pid = match client.get_parent() {
+        Some(p) => { p.id }
+        None => { context.root }
+    };
+
+    match client.titlebar {
+        Some(rec) => {
+            unsafe {
+                xlib::XSetBackground(context.display, gc,
+                                     context.unfocus_bg);
+                xlib::XSetForeground(context.display, gc,
+                                     context.unfocus_fg);
+
+                let r = xlib::XFillRectangle(context.display,
+                                             pid, gc,
+                                             rec.x, rec.y,
+                                             rec.width as u32,
+                                             rec.height as u32);
+            }
+        }
+        None => {}
+    }
+}
+
+pub fn decorate(client: &Container) {
     let (focus_id,_) = libx::get_input_focus(client.context);
     println!("focus id {}, client id {}", focus_id, client.id);
 
     // try draw rectangle
     if focus_id == client.id {
-        decorate_focus(pid, client, x, y, width, height);
+        decorate_focus(client);
     }
     else {
-        decorate_unfocus(pid, client, x, y, width, height);
+        decorate_unfocus(client);
     }
 }
 
@@ -121,13 +151,18 @@ fn layout_tiling(container: &mut Container) {
             _ => {}
         };
 
-        let titlebar = client.titlebar_height;
-        decorate(container.id, client,
-                 x, y,
-                 w as usize,
-                 titlebar as usize);
-        h = h - titlebar as i32;
-        client.configure(x, y+titlebar as i32,
+        client.titlebar = Some(Rectangle {
+            x: x,
+            y: y,
+            width: w as usize,
+            height: client.titlebar_height,
+        });
+
+        let titlebar_height = client.titlebar.unwrap().height;
+        decorate(client);;
+
+        h = h - titlebar_height as i32;
+        client.configure(x, y+titlebar_height as i32,
                          w as usize, h as usize);
         client.map();
     }
@@ -144,15 +179,20 @@ fn layout_tab(container: &mut Container) {
     let (focus_id,_) = libx::get_input_focus(container.context);
 
     for (i, client) in container.clients.iter_mut().enumerate() {
-        decorate(container.id, client,
-                 0, width*i as i32,
-                 width as usize,
-                 client.titlebar_height as usize);
+        client.titlebar = Some(Rectangle {
+            x: 0,
+            y: width*i as i32,
+            width: width as usize,
+            height: client.titlebar_height,
+        });
+
+        let titlebar_height = client.titlebar.unwrap().height;
+        decorate(client);
+
         if focus_id == client.id {
-            let h = client.titlebar_height;
-            client.configure(0, h as i32,
+            client.configure(0, titlebar_height as i32,
                              attrs.width as usize,
-                             (attrs.height-h as i32) as usize);
+                             (attrs.height-titlebar_height as i32) as usize);
             client.map();
         }
         else{

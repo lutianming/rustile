@@ -24,6 +24,7 @@ pub struct Container {
     pub parent: *mut Container,
     pub clients: Vec<Container>,
     pub mode: Mode,
+    pub titlebar: Option<layout::Rectangle>,
     pub context: libx::Context,
 
     pub layout: layout::Type,
@@ -60,6 +61,7 @@ impl Container {
             id: id,
             mode: Mode::Normal,
             parent: ptr::null_mut(),
+            titlebar: None,
             titlebar_height: 0,
 
             layout: layout::Type::Tiling,
@@ -265,23 +267,31 @@ impl Container {
 
     pub fn focus(&self) {
         libx::set_input_focus(self.context, self.id);
-        // match self.client {
-        //     Some(id) => {
-        //         libx::set_input_focus(self.context, id);
-        //         self.draw_titlebar(true);
-        //     }
-        //     None => {
-        //         libx::set_input_focus(self.context, self.id);
-        //     }
-        // }
+        self.decorate(true);
     }
 
     pub fn unfocus(&self) {
-
+        self.decorate(false);
     }
 
     pub fn switch_client(&self) {
         let (x, _) = libx::get_input_focus(self.context);
+
+    }
+
+    pub fn decorate(&self, focused: bool) {
+        match self.get_parent() {
+            Some(p) => {
+                let pid = p.id;
+                if focused {
+                    layout::decorate_focus(self);
+                }
+                else {
+                    layout::decorate_unfocus(self);
+                }
+            }
+            None => {}
+        }
 
     }
 
