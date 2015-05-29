@@ -21,7 +21,6 @@ pub struct Container {
     pub id: xlib::Window,
     pub visible: bool,
     pub titlebar_height: usize,
-    pub pid: Option<xlib::Window>,
     parent: *mut Container,
     pub clients: Vec<Container>,
     pub mode: Mode,
@@ -57,7 +56,6 @@ impl Container {
         Container {
             context: context,
             clients: Vec::new(),
-            pid: None,
             visible: false,
             id: id,
             mode: Mode::Normal,
@@ -75,7 +73,11 @@ impl Container {
             print!(" ");
         }
         let attrs = libx::get_window_attributes(self.context, self.id);
-        println!("C {} pid:{} x:{} y:{} w:{} h:{}", self.id, self.pid.unwrap_or(0), attrs.x, attrs.y, attrs.width, attrs.height);
+        let pid = match self.get_parent() {
+            Some(p) => { p.id }
+            None => { 0}
+        };
+        println!("C {} pid:{} x:{} y:{} w:{} h:{}", self.id, pid, attrs.x, attrs.y, attrs.width, attrs.height);
         for client in self.clients.iter() {
             client.print_tree(indent+4);
         }
@@ -98,21 +100,29 @@ impl Container {
     pub fn size(&self) -> usize {
         self.clients.len()
     }
-    pub fn add(&mut self, mut client: Container) {
-        if client.pid.is_none() || client.pid.unwrap() != self.id {
+
+    pub fn be_parent(&mut self, client: &mut Container) {
+        let need_reprent = match client.get_parent() {
+            Some(p) => {
+                if p.id == self.id { false } else { true }
+            }
+            None => {
+                true
+            }
+        };
+        if need_reprent {
             libx::reparent(self.context, client.id, self.id, 0, 0);
-            client.pid = Some(self.id);
+            client.parent = self;
         }
-        client.parent = self;
+    }
+
+    pub fn add(&mut self, mut client: Container) {
+        self.be_parent(&mut client);
         self.clients.push(client);
     }
 
     pub fn insert(&mut self, index: usize,  mut client: Container) {
-        if client.pid.is_none() || client.pid.unwrap() != self.id {
-            libx::reparent(self.context, client.id, self.id, 0, 0);
-            client.pid = Some(self.id);
-        }
-        client.parent = self;
+        self.be_parent(&mut client);
         self.clients.insert(index, client);
     }
 
