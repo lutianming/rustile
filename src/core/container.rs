@@ -268,11 +268,29 @@ impl Container {
             return false;
         }
 
+
         let mut container = Container::new(self.context);
+        // add to parent
+        match self.get_parent() {
+            Some(p) => {
+                let attrs = libx::get_window_attributes(self.context, self.id);
+
+                libx::reparent(self.context, container.id, p.id,
+                               0, 0);
+                // configure to the same size and position like old one
+                container.configure(attrs.x, attrs.y,
+                                    attrs.width as usize,
+                                    attrs.height as usize);
+            }
+            None => {}
+        }
+
+        // swap the id
         let id = self.id;
         self.id = container.id;
         container.id = id;
         self.add(container);
+        self.map();
         true
     }
 
