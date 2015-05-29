@@ -194,11 +194,7 @@ impl ExecHandler {
     pub fn new(tokens: &[&str]) -> ExecHandler {
         let (name, args) = tokens.split_at(1);
         let mut cmd = Command::new(name[0]);
-
-        for arg in args {
-            println!("{}", arg);
-            cmd.arg(arg);
-        }
+        cmd.args(args);
 
         let handler = ExecHandler {
             cmd: cmd,
