@@ -69,7 +69,7 @@ impl Workspaces {
         match self.get(old) {
             Some(v) => {
                 v.unmap();
-                v.update();
+                v.update_layout();
             }
             None => {}
         }
@@ -77,7 +77,7 @@ impl Workspaces {
         match self.get(new) {
             Some(v) => {
                 v.map();
-                v.update();
+                v.update_layout();
             }
             None => {}
         }
@@ -122,7 +122,7 @@ impl Workspaces {
                 match self.get(k) {
                     Some(w) => {
                         w.add(container);
-                        w.update();
+                        w.update_layout();
                     }
                     None => {}
                 }
@@ -131,7 +131,7 @@ impl Workspaces {
                 // use current workspace
                 let current = self.current();
                 current.add(container);
-                current.update();
+                current.update_layout();
                 current.print_tree(0);
             }
         }
@@ -162,7 +162,7 @@ impl Workspaces {
                         };
                     }
 
-                    workspace.update();
+                    workspace.update_layout();
                     workspace.print_tree(0);
                     return Some(w)
                 }

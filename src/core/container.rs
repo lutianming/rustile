@@ -172,13 +172,13 @@ impl Container {
         self.clients.iter().position(|x| (*x).id == id)
     }
 
-    pub fn configure(&self, x: i32, y: i32, width: usize, height: usize) {
+    pub fn configure(&mut self, x: i32, y: i32, width: usize, height: usize) {
         libx::resize_window(self.context, self.id, x, y, width, height);
         // layout for children clients
-        self.update();
+        self.update_layout();
     }
 
-    pub fn update(&self) {
+    pub fn update_layout(&mut self) {
         self.layout.configure(self);
     }
 

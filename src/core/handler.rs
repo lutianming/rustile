@@ -187,7 +187,7 @@ impl Handler for LayoutHandler {
         let current = workspaces.current();
         let t = self.layout_type.clone();
         current.change_layout(t);
-        current.update();
+        current.update_layout();
     }
 }
 
