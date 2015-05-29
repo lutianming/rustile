@@ -25,7 +25,9 @@ pub struct Container {
     pub clients: Vec<Container>,
     pub mode: Mode,
     pub context: libx::Context,
-    layout: Box<layout::Layout>,
+
+    pub layout: layout::Type,
+    pub direction: layout::Direction,
 }
 
 impl PartialEq for Container {
@@ -59,7 +61,9 @@ impl Container {
             mode: Mode::Normal,
             parent: ptr::null_mut(),
             titlebar_height: 0,
-            layout: Box::new(layout::TilingLayout::new(layout::Direction::Horizontal))
+
+            layout: layout::Type::Tiling,
+            direction: layout::Direction::Horizontal,
         }
     }
 
@@ -166,7 +170,7 @@ impl Container {
     }
 
     pub fn update_layout(&mut self) {
-        self.layout.configure(self);
+        layout::update_layout(self);
     }
 
     pub fn map(&self) {
@@ -229,21 +233,20 @@ impl Container {
     }
 
     pub fn change_layout(&mut self, layout_type: layout::Type) {
-        let t = self.layout.get_type();
-        if t == layout_type {
-            self.layout.toggle();
+        if self.layout == layout_type {
+            match self.direction {
+                layout::Direction::Horizontal => {
+                    self.direction = layout::Direction::Vertical;
+                }
+                layout::Direction::Vertical => {
+                    self.direction = layout::Direction::Horizontal;
+                }
+                _ => {}
+            }
         }
         else{
-            match layout_type {
-                layout::Type::Tiling => {
-                    let tmp = layout::TilingLayout::new(layout::Direction::Horizontal);
-                    self.layout = Box::new(tmp);
-                }
-                layout::Type::Tab => {
-                    let tmp = layout::TabLayout::new();
-                    self.layout = Box::new(tmp);
-                }
-            }
+            self.layout = layout_type;
+            self.direction = layout::Direction::Horizontal;
         }
     }
 

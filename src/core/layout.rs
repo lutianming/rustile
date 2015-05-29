@@ -17,13 +17,9 @@ const CWBorderWidth: libc::c_uint = 1<<4;
 const CWSibling: libc::c_uint =	1<<5;
 const CWStackMode: libc::c_uint = 1<<6;
 
-
-pub trait Layout {
-    fn configure(&self, container: &Container);
-    fn toggle(&mut self) {}
-    fn get_type(&self) -> Type;
 }
 
+#[derive(PartialEq, Clone)]
 pub enum Direction {
     Vertical,
     Horizontal,
@@ -85,101 +81,82 @@ pub enum Type {
     Tab,
 }
 
-pub struct TilingLayout {
-    direction: Direction,
-}
-
-pub struct TabLayout;
-
-
-impl TabLayout {
-    pub fn new() -> TabLayout{
-        TabLayout
+pub fn update_layout(container: &mut Container) {
+    match container.layout {
+        Type::Tiling => {
+            layout_tiling(container);
+        }
+        Type::Tab => {
+            layout_tab(container);
+        }
     }
 }
 
-impl Layout for TabLayout {
-    fn get_type(&self) -> Type { Type::Tab }
-    fn configure(&self, container: &Container) {
-        let size = container.clients.len();
-        if size == 0{
-            return;
-        }
+fn layout_tiling(container: &mut Container) {
+    let size = container.clients.len();
+    if size == 0 {
+        return;
+    }
 
-        let attrs = libx::get_window_attributes(container.context, container.id);
-        let width = attrs.width/size as i32;
-        let (focus_id,_) = libx::get_input_focus(container.context);
+    let attrs = libx::get_window_attributes(container.context, container.id);
 
-        for (i, client) in container.clients.iter().enumerate() {
-            decorate(container.id, client,
-                     0, width*i as i32,
-                     width as usize,
-                     client.titlebar_height as usize);
-            if focus_id == client.id {
-                client.configure(0, client.titlebar_height as i32, attrs.width as usize, (attrs.height-client.titlebar_height as i32) as usize);
-                client.map();
+    let width = attrs.width  / size as libc::c_int;
+    let height = attrs.height / size as libc::c_int;
+
+    for (i, client) in container.clients.iter_mut().enumerate() {
+        let mut x = 0;
+        let mut y = 0;
+        let mut w = attrs.width;
+        let mut h = attrs.height;
+
+        match container.direction {
+            Direction::Vertical => {
+                y = height * i as libc::c_int;
+                h = height;
             }
-            else{
-                client.unmap();
+            Direction::Horizontal => {
+                x = width * i as libc::c_int;
+                w = width;
             }
-        }
-    }
-}
-
-impl TilingLayout {
-    pub fn new(d: Direction) -> TilingLayout{
-        TilingLayout {
-            direction: d,
-        }
-    }
-}
-
-impl Layout for TilingLayout {
-    fn get_type(&self) -> Type { Type::Tiling }
-    fn toggle(&mut self) {
-        match self.direction {
-            Direction::Vertical => self.direction = Direction::Horizontal,
-            Direction::Horizontal => self.direction = Direction::Vertical,
             _ => {}
-        }
+        };
+
+        let titlebar = client.titlebar_height;
+        decorate(container.id, client,
+                 x, y,
+                 w as usize,
+                 titlebar as usize);
+        h = h - titlebar as i32;
+        client.configure(x, y+titlebar as i32,
+                         w as usize, h as usize);
+        client.map();
     }
-    /// once we add or remove a window, we need to reconfig
-    fn configure(&self, container: &Container) {
-        let size = container.clients.len();
-        if size == 0 {
-            return;
-        }
+}
 
-        let attrs = libx::get_window_attributes(container.context, container.id);
+fn layout_tab(container: &mut Container) {
+    let size = container.clients.len();
+    if size == 0{
+        return;
+    }
 
-        let width = attrs.width  / size as libc::c_int;
-        let height = attrs.height / size as libc::c_int;
+    let attrs = libx::get_window_attributes(container.context, container.id);
+    let width = attrs.width/size as i32;
+    let (focus_id,_) = libx::get_input_focus(container.context);
 
-        for (i, client) in container.clients.iter().enumerate() {
-            let mut x = 0;
-            let mut y = 0;
-            let mut w = attrs.width;
-            let mut h = attrs.height;
-
-            match self.direction {
-                Direction::Vertical => {
-                    y = height * i as libc::c_int;
-                    h = height;
-                }
-                Direction::Horizontal => {
-                    x = width * i as libc::c_int;
-                    w = width;
-                }
-                _ => {}
-            };
-
-            decorate(container.id, client,
-                     x, y,
-                     w as usize,
-                     client.titlebar_height as usize);
-            h = h - client.titlebar_height as i32;
-            client.configure(x, y+client.titlebar_height as i32, w as usize, h as usize);
+    for (i, client) in container.clients.iter_mut().enumerate() {
+        decorate(container.id, client,
+                 0, width*i as i32,
+                 width as usize,
+                 client.titlebar_height as usize);
+        if focus_id == client.id {
+            let h = client.titlebar_height;
+            client.configure(0, h as i32,
+                             attrs.width as usize,
+                             (attrs.height-h as i32) as usize);
             client.map();
+        }
+        else{
+            client.unmap();
         }
     }
 }
