@@ -29,7 +29,7 @@ impl Workspaces {
     }
 
     pub fn create(&mut self, key: char) {
-        let space = Container::from_id(self.context, self.context.root);
+        let mut space = Container::new(self.context);
         self.spaces.insert(key, space);
     }
 
