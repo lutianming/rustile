@@ -183,6 +183,21 @@ impl WindowManager {
         }
     }
 
+    pub fn handle_button_press(&mut self, event: &xlib::XButtonEvent) {
+        let id = match self.workspaces.get_container(event.window) {
+            Some((_,c)) => {
+                let client = c.query_point(event.x, event.y);
+                match client {
+                    Some(c) => {
+                        c.id
+                    }
+                    None => { return }
+                }
+            }
+            None => { return }
+        };
+        self.workspaces.set_focus(id);
+    }
     pub fn handle_key_release(&mut self, event: &xlib::XKeyEvent) {
         if event.state > 0 {
             let sym = libx::lookup_keysym(*event, 0);
@@ -288,6 +303,7 @@ impl WindowManager {
             xlib::ButtonPress => {
                 let mut event: xlib::XButtonEvent = From::from(e);
                 debug!("button press {}", event.window);
+                self.handle_button_press(&event);
             }
             xlib::ConfigureNotify => {
                 debug!("configure notify");
@@ -332,7 +348,7 @@ impl WindowManager {
 
     pub fn init(&mut self) {
         let mask = 0x1A0034;
-        let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask;
+        let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask | xlib::ButtonPressMask;
 
         unsafe{
             // xlib::XSetErrorHandler(Some(error_handler));

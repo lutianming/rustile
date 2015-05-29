@@ -25,6 +25,16 @@ pub struct Rectangle {
     pub height: usize,
 }
 
+impl Rectangle {
+    pub fn contain(&self, x: i32, y: i32) -> bool{
+        if x >= self.x && x <= (self.x + self.width as i32) && y >= self.y && y <= (self.y + self.height as i32) {
+            true
+        }
+        else{
+            false
+        }
+    }
+}
 #[derive(PartialEq, Clone)]
 pub enum Direction {
     Vertical,

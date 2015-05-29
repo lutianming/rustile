@@ -48,7 +48,7 @@ impl Container {
                                      attrs.x, attrs.y,
                                      attrs.width as libc::c_uint,
                                      attrs.height as libc::c_uint);
-        libx::select_input(context, id, xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask);
+        libx::select_input(context, id, xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask | xlib::ButtonPressMask);
         let mut c = Container::from_id(context, id);
         c
     }
@@ -330,6 +330,20 @@ impl Container {
         }
     }
 
+    // decide which client when click on titlebar
+    pub fn query_point(&self, x: i32, y: i32) -> Option<&Container>{
+        for client in self.clients.iter() {
+            match client.titlebar {
+                Some(rec) => {
+                    if rec.contain(x, y) {
+                        return Some(client);
+                    }
+                }
+                None => {}
+            }
+        }
+        None
+    }
 }
 
 // #[test]
