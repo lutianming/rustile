@@ -49,23 +49,17 @@ impl Workspaces {
         self.current
     }
 
-    pub fn switch_current(&mut self, new: char, context: Context){
+    pub fn switch_workspace(&mut self, new: char, context: Context){
         if new == self.current {
             return
         }
 
-        let old = self.current;
-        self.current = new;
-
-        if !self.contain(old) {
-            // let s = libx::default_screen(context);
-            self.create(old);
-        }
         if !self.contain(new) {
             // let s = libx::default_screen(context);
             self.create(new);
         }
 
+        let old = self.current;
         match self.get(old) {
             Some(v) => {
                 v.unmap();
@@ -74,9 +68,12 @@ impl Workspaces {
             None => {}
         }
 
+        self.current = new;
         match self.get(new) {
             Some(v) => {
+                println!("workspace {}", v.id);
                 v.map();
+                v.focus();
                 v.update_layout();
             }
             None => {}

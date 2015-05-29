@@ -145,7 +145,7 @@ impl Handler for WorkspaceHandler {
         if !workspaces.contain(self.key) {
             workspaces.create(self.key);
         }
-        workspaces.switch_current(self.key, context);
+        workspaces.switch_workspace(self.key, context);
         println!("to {}", workspaces.current_name());
     }
 }

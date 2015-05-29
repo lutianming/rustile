@@ -135,7 +135,7 @@ impl Container {
         }
     }
 
-    pub fn get(&mut self, index: usize) -> Option<&mut Container> {
+    pub fn get_child(&mut self, index: usize) -> Option<&mut Container> {
         self.clients.get_mut(index)
     }
 
@@ -212,7 +212,7 @@ impl Container {
                 if next == self.size() {
                     next = 0;
                 }
-                self.get(next)
+                self.get_child(next)
             }
             None => {
                 None
@@ -227,7 +227,7 @@ impl Container {
                 if last < 0 {
                     last = self.size() - 1
                 }
-                self.get(last)
+                self.get_child(last)
             }
             None => {
                 None
