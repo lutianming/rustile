@@ -115,6 +115,7 @@ impl Container {
         client.parent = self;
         self.clients.insert(index, client);
     }
+
     pub fn remove(&mut self, id: xlib::Window) -> Option<Container>{
         let res = self.contain(id);
         match res {
@@ -148,18 +149,17 @@ impl Container {
     }
 
     pub fn tree_search(&mut self, id: xlib::Window) -> Option<&mut Container>{
-        match self.contain(id) {
-            Some(index) => { self.get(index) }
-            None => {
-                for client in self.clients.iter_mut() {
-                    let r = client.tree_search(id);
-                    if r.is_some(){
-                        return r
-                    }
-                }
-                None
+        if self.id == id {
+            return Some(self);
+        }
+
+        for client in self.clients.iter_mut() {
+            let r = client.tree_search(id);
+            if r.is_some(){
+                return r
             }
         }
+        None
     }
 
     pub fn contain(&self, id: xlib::Window) -> Option<usize>{
