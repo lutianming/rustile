@@ -175,10 +175,22 @@ impl Handler for ExecHandler {
 impl Handler for LayoutHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("handle layout");
-        let current = workspaces.current();
         let t = self.layout_type.clone();
-        current.change_layout(t);
-        current.update_layout();
+        let focused = workspaces.get_focus();
+        match focused {
+            Some(container) => {
+                if container.get_parent().is_some() {
+                    let p = container.get_parent().unwrap();
+                    p.change_layout(t);
+                    p.update_layout();
+                }
+                else {
+                    container.change_layout(t);
+                    container.update_layout();
+                }
+            }
+            None => {}
+        }
     }
 }
 
