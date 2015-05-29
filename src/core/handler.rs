@@ -75,6 +75,21 @@ pub struct WindowFocusHandler {
 }
 
 pub struct WindowCloseHandler;
+pub struct SplitHandler;
+
+impl Handler for SplitHandler {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+        workspaces.current().print_tree(0);
+        match workspaces.get_focus() {
+            Some(c) => {
+                c.split();
+            }
+            None => {}
+        }
+        println!("after");
+        workspaces.current().print_tree(0);
+    }
+}
 
 impl Handler for WindowCloseHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
