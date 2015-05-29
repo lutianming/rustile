@@ -6,6 +6,7 @@ use x11::xlib;
 use std::rc::{ Rc, Weak };
 use std::cell::RefCell;
 use std::boxed::Box;
+use std::ptr;
 use super::layout;
 use super::super::libx;
 
@@ -21,7 +22,7 @@ pub struct Container {
     pub visible: bool,
     pub titlebar_height: usize,
     pub pid: Option<xlib::Window>,
-    pub parent: *mut Container,
+    parent: *mut Container,
     pub clients: Vec<Container>,
     pub mode: Mode,
     pub titlebar: Option<layout::Rectangle>,
@@ -137,7 +138,7 @@ impl Container {
         self.clients.get_mut(index)
     }
 
-    pub fn get_parent(&mut self) -> Option<&mut Container> {
+    pub fn get_parent(&self) -> Option<&mut Container> {
         if self.parent == ptr::null_mut() {
             None
         }
