@@ -127,8 +127,8 @@ impl Container {
         }
     }
 
-    pub fn get(&self, index: usize) -> Option<&Container> {
-        self.clients.get(index)
+    pub fn get(&mut self, index: usize) -> Option<&mut Container> {
+        self.clients.get_mut(index)
     }
 
     pub fn get_parent(&mut self) -> Option<&mut Container> {
@@ -140,11 +140,11 @@ impl Container {
         }
     }
 
-    pub fn tree_search(&self, id: xlib::Window) -> Option<&Container>{
+    pub fn tree_search(&mut self, id: xlib::Window) -> Option<&mut Container>{
         match self.contain(id) {
             Some(index) => { self.get(index) }
             None => {
-                for client in self.clients.iter() {
+                for client in self.clients.iter_mut() {
                     let r = client.tree_search(id);
                     if r.is_some(){
                         return r
@@ -198,7 +198,7 @@ impl Container {
         }
     }
 
-    pub fn next_client(&self, id: xlib::Window) -> Option<&Container>{
+    pub fn next_client(&mut self, id: xlib::Window) -> Option<&mut Container>{
         match self.contain(id) {
             Some(i) => {
                 let mut next = i+1;
@@ -213,7 +213,7 @@ impl Container {
         }
     }
 
-    pub fn last_client(&self, id: xlib::Window) -> Option<&Container>{
+    pub fn last_client(&mut self, id: xlib::Window) -> Option<&mut Container>{
         match self.contain(id) {
             Some(i) => {
                 let mut last = i-1;

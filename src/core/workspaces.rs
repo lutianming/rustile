@@ -190,7 +190,7 @@ impl Workspaces {
         }
     }
 
-    pub fn get_focus(&mut self) -> Option<&Container> {
+    pub fn get_focus(&mut self) -> Option<&mut Container> {
         let (w, _) = libx::get_input_focus(self.context);
         let res = self.get_container(w);
         match res {
@@ -201,8 +201,8 @@ impl Workspaces {
         }
     }
 
-    pub fn get_container(&self, id: Window) -> Option<(char, &Container)>{
-        for (k, w) in self.spaces.iter() {
+    pub fn get_container(&mut self, id: Window) -> Option<(char, &mut Container)>{
+        for (k, w) in self.spaces.iter_mut() {
             let r = w.tree_search(id);
             if r.is_some(){
                 return Some((*k, r.unwrap()))
