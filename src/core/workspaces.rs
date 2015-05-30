@@ -156,31 +156,14 @@ impl Workspaces {
 
     pub fn remove_window(&mut self, window: Window) -> Option<Container>{
         for (k, workspace) in self.spaces.iter_mut() {
-            let res =  workspace.remove(window);
+            let res =  workspace.tree_remove(window);
             match res {
                 Some(w) => {
-                    match w.get_parent() {
-                        Some(p) => {
-                            let res = workspace.remove(p.id);
-                            if res.is_some(){
-                                res.unwrap().destroy();
-                            };
-                        }
-                        None => {}
-                    }
-                    // if w.get_parent().is_some() {
-                    //     let res = workspace.remove(w.pid.unwrap());
-                    //     if res.is_some(){
-                    //         res.unwrap().destroy();
-                    //     };
-                    // }
-
                     workspace.update_layout();
                     workspace.print_tree(0);
                     return Some(w)
                 }
                 None => {
-
                 }
             }
         }

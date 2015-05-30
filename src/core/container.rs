@@ -134,17 +134,48 @@ impl Container {
                 Some(r)
             }
             None => {
-                for c in self.clients.iter_mut() {
-                    let r = c.remove(id);
-                    if r.is_some(){
-                        return r;
-                    }
-                }
+                // for c in self.clients.iter_mut() {
+                //     let r = c.remove(id);
+                //     if r.is_some(){
+                //         return r;
+                //     }
+                // }
                 None
             }
         }
     }
 
+    /// remove App container and destroy all its parent containers that are empty
+    pub fn tree_remove(&mut self, id: xlib::Window) -> Option<Container> {
+        println!("try remove {} from {}", id, self.id);
+        let res = self.contain(id);
+        match res {
+            Some(i) => {
+                let r = self.clients.remove(i);
+                Some(r)
+            }
+            None => {
+                let mut r: Option<Container> = None;
+                let mut index: i32 = -1;
+                for (i, c) in self.clients.iter_mut().enumerate() {
+                    r = c.tree_remove(id);
+                    if r.is_some(){
+                        index = i as i32;
+                        break
+                    }
+                }
+                if index >= 0 {
+                    let i = index as usize;
+                    let size = self.get_child(i).unwrap().size();
+                    if size == 0 {
+                        let container = self.clients.remove(i);
+                        container.destroy();
+                    }
+                }
+                r
+            }
+        }
+    }
     pub fn get_child(&mut self, index: usize) -> Option<&mut Container> {
         self.clients.get_mut(index)
     }
