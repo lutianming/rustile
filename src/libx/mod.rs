@@ -68,6 +68,18 @@ pub fn default_screen(context: Context) -> c_int {
     }
 }
 
+pub fn raise_window(context: Context, id: Window) {
+    unsafe {
+        xlib::XRaiseWindow(context.display, id);
+    }
+}
+
+pub fn lower_window(context: Context, id: Window) {
+    unsafe {
+        xlib::XLowerWindow(context.display, id);
+    }
+}
+
 pub fn create_window(context: Context, parent: Window, x: c_int, y: c_int, width: c_uint, height: c_uint) -> Window{
     unsafe {
         xlib::XCreateSimpleWindow(context.display, parent, x, y, width, height, 0, 0, 0)

@@ -328,10 +328,12 @@ impl Container {
 
     pub fn focus(&self) {
         libx::set_input_focus(self.context, self.id);
+        libx::raise_window(self.context, self.id);
         self.decorate(true);
     }
 
     pub fn unfocus(&self) {
+        // libx::lower_window(self.context, self.id);
         self.decorate(false);
     }
 

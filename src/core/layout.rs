@@ -17,7 +17,7 @@ const CWBorderWidth: libc::c_uint = 1<<4;
 const CWSibling: libc::c_uint =	1<<5;
 const CWStackMode: libc::c_uint = 1<<6;
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Rectangle {
     pub x: i32,
     pub y: i32,
@@ -174,7 +174,7 @@ fn layout_tiling(container: &mut Container) {
         h = h - titlebar_height as i32;
         client.configure(x, y+titlebar_height as i32,
                          w as usize, h as usize);
-        client.map();
+        // client.map();
     }
 }
 
@@ -190,8 +190,8 @@ fn layout_tab(container: &mut Container) {
 
     for (i, client) in container.clients.iter_mut().enumerate() {
         client.titlebar = Some(Rectangle {
-            x: 0,
-            y: width*i as i32,
+            x: width*i as i32,
+            y: 0,
             width: width as usize,
             height: client.titlebar_height,
         });
@@ -199,14 +199,16 @@ fn layout_tab(container: &mut Container) {
         let titlebar_height = client.titlebar.unwrap().height;
         decorate(client);
 
+        client.configure(0, titlebar_height as i32,
+                         attrs.width as usize,
+                         (attrs.height-titlebar_height as i32) as usize);
         if focus_id == client.id {
-            client.configure(0, titlebar_height as i32,
-                             attrs.width as usize,
-                             (attrs.height-titlebar_height as i32) as usize);
-            client.map();
+            // client.map();
+            libx::raise_window(client.context, client.id);
         }
         else{
-            client.unmap();
+            // client.unmap();
+            // libx::lower_window(client.context, client.id);
         }
     }
 }
