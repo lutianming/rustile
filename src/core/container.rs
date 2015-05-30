@@ -316,10 +316,11 @@ impl Container {
             None => {}
         }
 
-        // swap the id
+        // swap the property
         let id = self.id;
         self.id = container.id;
         container.id = id;
+        container.titlebar_height = self.titlebar_height;
         self.add(container);
         self.map();
         true
