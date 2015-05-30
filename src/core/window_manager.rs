@@ -185,13 +185,13 @@ impl WindowManager {
 
     pub fn handle_button_press(&mut self, event: &xlib::XButtonEvent) {
         let id = match self.workspaces.get_container(event.window) {
-            Some((_,c)) => {
-                let client = c.query_point(event.x, event.y);
+            Some((_,container)) => {
+                let client = container.query_point(event.x, event.y);
                 match client {
                     Some(c) => {
                         c.id
                     }
-                    None => { return }
+                    None => { container.id }
                 }
             }
             None => { return }
