@@ -222,8 +222,6 @@ impl WindowManager {
         let usertime = libx::get_atom(self.context, "_NET_WM_USER_TIME");
         match event.atom {
             usertime => {
-                debug!("_NET_WM_USER_TIME");
-                // let window = Window::new(self.context, event.window);
                 self.workspaces.set_focus(event.window);
             }
         }

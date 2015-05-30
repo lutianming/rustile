@@ -39,7 +39,6 @@ impl KeyBind {
             }
         }
 
-        println!("bind {} {}", mask, sym);
         KeyBind {
             mask: mask,
             key: sym
