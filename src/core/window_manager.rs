@@ -41,11 +41,17 @@ fn load_resource(mut context: &mut libx::Context) {
         let r = xlib::XParseColor(display, cmap, name, &mut color);
         xlib::XAllocColor(display, cmap, &mut color);
 
+        let font_name = ffi::CString::new("fixed").unwrap().as_ptr();
+        let font = xlib::XLoadQueryFont(display, font_name);
+        xlib::XSetFont(display, gc, (*font).fid);
+
         context.gc = gc;
+        context.font = font;
         context.focus_bg = black;
         context.focus_fg = color.pixel;
         context.unfocus_bg = black;
         context.unfocus_fg = black;
+        context.font_color = white;
     }
 }
 

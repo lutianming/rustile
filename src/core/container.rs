@@ -346,12 +346,7 @@ impl Container {
         match self.get_parent() {
             Some(p) => {
                 let pid = p.id;
-                if focused {
-                    layout::decorate_focus(self);
-                }
-                else {
-                    layout::decorate_unfocus(self);
-                }
+                layout::decorate(self, focused);
             }
             None => {}
         }

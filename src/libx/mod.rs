@@ -29,10 +29,12 @@ pub struct Context {
     pub root: Window,
 
     pub gc: xlib::GC,
+    pub font: *mut xlib::XFontStruct,
     pub focus_bg: c_ulong,
     pub focus_fg: c_ulong,
     pub unfocus_bg: c_ulong,
     pub unfocus_fg: c_ulong,
+    pub font_color: c_ulong,
 }
 
 pub fn open_display(name: Option<&str>) -> Option<Context> {
