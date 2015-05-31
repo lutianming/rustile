@@ -1,5 +1,6 @@
 extern crate libc;
 
+use std::ptr;
 use x11::xlib;
 use x11::xlib::Window;
 use super::super::libx;
@@ -17,6 +18,10 @@ unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XE
     //     _ => {}
     // }
     1
+}
+
+extern "C" {
+    fn setlocale(category: i32, locale: *const i8) -> *mut i8;
 }
 
 fn load_resource(mut context: &mut libx::Context) {
@@ -41,17 +46,33 @@ fn load_resource(mut context: &mut libx::Context) {
         let r = xlib::XParseColor(display, cmap, name, &mut color);
         xlib::XAllocColor(display, cmap, &mut color);
 
-        let font_name = ffi::CString::new("fixed").unwrap().as_ptr();
-        let font = xlib::XLoadQueryFont(display, font_name);
-        xlib::XSetFont(display, gc, (*font).fid);
-
         context.gc = gc;
-        context.font = font;
         context.focus_bg = black;
         context.focus_fg = color.pixel;
         context.unfocus_bg = black;
         context.unfocus_fg = black;
         context.font_color = white;
+
+        let s = ffi::CString::new("").unwrap().as_ptr();
+        let p = setlocale(6, s);
+        let res = xlib::XSupportsLocale();
+        let res = xlib::XSetLocaleModifiers(s);
+
+        let mut missing_charsets = ptr::null_mut();
+        let mut num_missing_charsets: i32 = 0;
+        let mut default_string = ptr::null_mut();
+        // let name = "-misc-fixed-*-*-*-*-*-130-75-75-*-*-*-*";
+        let name = "*";
+        let fontbase = ffi::CString::new(name).unwrap().as_ptr();
+        let fontset = xlib::XCreateFontSet(display,
+                                           fontbase,
+                                           &mut missing_charsets,
+                                           &mut num_missing_charsets,
+                                           &mut default_string);
+        if num_missing_charsets > 0 {
+            xlib::XFreeStringList(missing_charsets);
+        }
+        context.fontset = fontset;
     }
 }
 

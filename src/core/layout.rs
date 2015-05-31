@@ -46,11 +46,6 @@ pub enum Direction {
 }
 
 pub fn decorate(client: &Container, focused: bool) {
-    let (focus_id,_) = libx::get_input_focus(client.context);
-    println!("focus id {}, client id {}", focus_id, client.id);
-
-    // try draw rectangle
-
     let context = client.context;
     let gc = context.gc;
 
@@ -93,13 +88,25 @@ pub fn decorate(client: &Container, focused: bool) {
                                          context.font_color);
                 }
 
-                let offset_x = 5;
-                let offset_y = (*context.font).ascent;
+                let offset_x = 10;
+                let offset_y = 10;
 
-                let title = ffi::CString::new("title").unwrap().as_ptr();
-                let r = xlib::XDrawString(context.display, pid, gc,
-                                          rec.x+offset_x, rec.y+offset_y,
-                                          title, 5);
+                let res = libx::get_text_property(context, client.id, xlib::XA_WM_NAME);
+                match res {
+                    Some(s) => {
+                        println!("window {} {}", client.id, s);
+                        // let s = "标题";
+                        let size = s.len() as i32;
+                        let title = ffi::CString::new(s).unwrap().as_ptr();
+
+                        let r = xlib::XmbDrawString(context.display, pid,
+                                                    context.fontset, gc,
+                                                    rec.x+offset_x, rec.y+offset_y,
+                                                    title, size);
+                    }
+                    None =>{}
+                }
+
             }
 
         }

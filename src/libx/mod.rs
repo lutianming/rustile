@@ -29,7 +29,7 @@ pub struct Context {
     pub root: Window,
 
     pub gc: xlib::GC,
-    pub font: *mut xlib::XFontStruct,
+    pub fontset: xlib::XFontSet,
     pub focus_bg: c_ulong,
     pub focus_fg: c_ulong,
     pub unfocus_bg: c_ulong,
@@ -165,15 +165,26 @@ pub fn get_text_property(context: Context, window: xlib::Window, atom: xlib::Ato
         if r == 0 || prop.nitems == 0{
             None
         }else{
+            let mut list_return = ptr::null_mut();
+            let mut count_return = 0;
+            xlib::XmbTextPropertyToTextList(context.display, &mut prop, &mut list_return, &mut count_return);
+            if count_return <= 0 {
+                return None;
+            }
 
-            // let s = String::from_raw_parts(prop.value, prop.nitems as usize, prop.nitems as usize).clone()
-            let s = slice::from_raw_parts(prop.value, prop.nitems as usize).iter().map(|&c| c as u8).collect();
-            match String::from_utf8(s) {
+            let strings = slice::from_raw_parts(list_return, count_return as usize);
+            let text = ffi::CStr::from_ptr(strings[0]).to_bytes();
+            let s = str::from_utf8(text);
+            match s {
                 Ok(v) => {
-                    xlib::XFree(prop.value as *mut libc::c_void);
-                    Some(v)
+                    let r = Some(v.to_string().clone());
+                    xlib::XFreeStringList(list_return);
+                    r
                 }
-                _ => None
+
+                Err(e) => {
+                    None
+                }
             }
         }
     }
