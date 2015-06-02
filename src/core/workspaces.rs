@@ -71,7 +71,7 @@ impl Workspaces {
         self.current = new;
         match self.get(new) {
             Some(v) => {
-                println!("workspace {}", v.id);
+                println!("workspace {}", v.raw_id());
                 v.map();
                 v.focus();
                 v.update_layout();
@@ -140,7 +140,7 @@ impl Workspaces {
             Some(c) => {
                 match c.get_parent(){
                     Some(p) => {
-                        let index = p.contain(c.id).unwrap();
+                        let index = p.contain(c.raw_id()).unwrap();
                         p.insert(index+1, container);
                         p.update_layout();
                         p.print_tree(0);

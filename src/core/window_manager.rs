@@ -156,7 +156,7 @@ impl WindowManager {
             // change attributes before display
             let mask = 0x420010;
             let mask = xlib::EnterWindowMask | xlib::PropertyChangeMask;
-            libx::select_input(self.context, container.id, mask);
+            libx::select_input(self.context, container.raw_id(), mask);
 
             if self.config.titlebar_height > 0 {
                 container.titlebar_height = self.config.titlebar_height as usize;
@@ -216,9 +216,9 @@ impl WindowManager {
                 let client = container.query_point(event.x, event.y);
                 match client {
                     Some(c) => {
-                        c.id
+                        c.raw_id()
                     }
-                    None => { container.id }
+                    None => { container.raw_id() }
                 }
             }
             None => { return }
@@ -271,7 +271,7 @@ impl WindowManager {
 
     pub fn handle_focus_in(&mut self, event: &xlib::XFocusChangeEvent) {
         self.workspaces.set_focus(event.window);
-      }
+    }
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
         if event.focus == 0 {

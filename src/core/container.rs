@@ -18,7 +18,7 @@ pub enum Mode {
 }
 
 pub struct Container {
-    pub id: xlib::Window,
+    pub id: Option<xlib::Window>,
     pub visible: bool,
     pub titlebar_height: usize,
     parent: *mut Container,
@@ -33,7 +33,7 @@ pub struct Container {
 
 impl PartialEq for Container {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        self.raw_id() == other.raw_id()
     }
 }
 
@@ -48,8 +48,20 @@ impl Container {
                                      attrs.width as libc::c_uint,
                                      attrs.height as libc::c_uint);
         libx::select_input(context, id, xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask | xlib::ButtonPressMask);
-        let mut c = Container::from_id(context, id);
-        c
+        Container {
+            context: context,
+            clients: Vec::new(),
+            visible: false,
+            id: Some(id),
+            mode: Mode::Normal,
+            category: Type::Container,
+            parent: ptr::null_mut(),
+            titlebar: None,
+            titlebar_height: 0,
+
+            layout: layout::Type::Tiling,
+            direction: layout::Direction::Horizontal,
+        }
     }
 
     pub fn from_id(context: libx::Context, id: xlib::Window) -> Container {
@@ -57,7 +69,7 @@ impl Container {
             context: context,
             clients: Vec::new(),
             visible: false,
-            id: id,
+            id: Some(id),
             mode: Mode::Normal,
             parent: ptr::null_mut(),
             titlebar: None,
@@ -72,15 +84,29 @@ impl Container {
         for i in 0..indent {
             print!(" ");
         }
-        let attrs = libx::get_window_attributes(self.context, self.id);
+        let attrs = libx::get_window_attributes(self.context, self.raw_id());
         let pid = match self.get_parent() {
-            Some(p) => { p.id }
+            Some(p) => { p.raw_id() }
             None => { 0}
         };
-        println!("C {} pid:{} x:{} y:{} w:{} h:{}", self.id, pid, attrs.x, attrs.y, attrs.width, attrs.height);
+        println!("C {} pid:{} x:{} y:{} w:{} h:{}", self.raw_id(), pid, attrs.x, attrs.y, attrs.width, attrs.height);
         for client in self.clients.iter() {
             client.print_tree(indent+4);
         }
+    }
+
+    pub fn raw_id(&self) -> xlib::Window {
+        // let mut id: xlib::Window = 0;
+        // if self.id.is_some() {
+        //     id = self.id.unwrap();
+        // }
+        // if self.display.is_some() {
+        //     id = unsafe {
+        //         self.display.as_ref().unwrap().get_window().unwrap().platform_window() as xlib::Window
+        //     };
+        // };
+        // id
+        self.id.unwrap()
     }
 
     // pub fn is_top(&self) -> bool {
@@ -104,14 +130,14 @@ impl Container {
     pub fn be_parent(&mut self, client: &mut Container) {
         let need_reprent = match client.get_parent() {
             Some(p) => {
-                if p.id == self.id { false } else { true }
+                if p.raw_id() == self.raw_id() { false } else { true }
             }
             None => {
                 true
             }
         };
         if need_reprent {
-            libx::reparent(self.context, client.id, self.id, 0, 0);
+            libx::reparent(self.context, client.raw_id(), self.raw_id(), 0, 0);
             client.parent = self;
         }
     }
@@ -147,7 +173,7 @@ impl Container {
 
     /// remove App container and destroy all its parent containers that are empty
     pub fn tree_remove(&mut self, id: xlib::Window) -> Option<Container> {
-        println!("try remove {} from {}", id, self.id);
+        println!("try remove {} from {}", id, self.raw_id());
         let res = self.contain(id);
         match res {
             Some(i) => {
@@ -190,7 +216,7 @@ impl Container {
     }
 
     pub fn tree_search(&mut self, id: xlib::Window) -> Option<&mut Container>{
-        if self.id == id {
+        if self.raw_id() == id {
             return Some(self);
         }
 
@@ -204,11 +230,11 @@ impl Container {
     }
 
     pub fn contain(&self, id: xlib::Window) -> Option<usize>{
-        self.clients.iter().position(|x| (*x).id == id)
+        self.clients.iter().position(|x| (*x).raw_id() == id)
     }
 
     pub fn configure(&mut self, x: i32, y: i32, width: usize, height: usize) {
-        libx::resize_window(self.context, self.id, x, y, width, height);
+        libx::resize_window(self.context, self.raw_id(), x, y, width, height);
         // layout for children clients
         self.update_layout();
     }
@@ -219,7 +245,7 @@ impl Container {
 
     pub fn map(&self) {
         // self.visible = true;
-        libx::map_window(self.context, self.id);
+        libx::map_window(self.context, self.raw_id());
         for client in self.clients.iter() {
             client.map();
         }
@@ -230,14 +256,14 @@ impl Container {
         for client in self.clients.iter() {
             client.unmap();
         }
-        libx::unmap_window(self.context, self.id);
+        libx::unmap_window(self.context, self.raw_id());
     }
 
     pub fn destroy(&self) -> bool {
         // can distroy only if it has no clients
         if self.clients.is_empty() {
             unsafe{
-                xlib::XDestroyWindow(self.context.display, self.id);
+                xlib::XDestroyWindow(self.context.display, self.raw_id());
                 true
             }
         }
@@ -304,9 +330,9 @@ impl Container {
         // add to parent
         match self.get_parent() {
             Some(p) => {
-                let attrs = libx::get_window_attributes(self.context, self.id);
+                let attrs = libx::get_window_attributes(self.context, self.raw_id());
 
-                libx::reparent(self.context, container.id, p.id,
+                libx::reparent(self.context, container.raw_id(), p.raw_id(),
                                0, 0);
                 // configure to the same size and position like old one
                 container.configure(attrs.x, attrs.y,
@@ -327,8 +353,9 @@ impl Container {
     }
 
     pub fn focus(&self) {
-        libx::set_input_focus(self.context, self.id);
-        libx::raise_window(self.context, self.id);
+        let id = self.raw_id();
+        libx::set_input_focus(self.context, id);
+        libx::raise_window(self.context, id);
         self.decorate(true);
     }
 
@@ -345,7 +372,6 @@ impl Container {
     pub fn decorate(&self, focused: bool) {
         match self.get_parent() {
             Some(p) => {
-                let pid = p.id;
                 layout::decorate(self, focused);
             }
             None => {}
@@ -356,25 +382,25 @@ impl Container {
     // fullscreen & normal toggle
     pub fn mode_toggle(&mut self) {
         let context = self.context;
+        let id = self.raw_id();
         match self.mode {
             Mode::Normal => {
                 self.mode = Mode::Fullscreen;
-                println!("fullscreen {} {}", self.id, context.root);
-                libx::reparent(context, self.id, context.root, 0, 0);
+                println!("fullscreen {} {}", id, context.root);
+                libx::reparent(context, id, context.root, 0, 0);
 
                 let width = libx::display_width(context, context.screen_num);
                 let height = libx::display_height(context, context.screen_num);
-                libx::resize_window(context, self.id, 0, 0,
+                libx::resize_window(context, id, 0, 0,
                                     width as usize,
                                     height as usize);
             }
             Mode::Fullscreen => {
                 self.mode = Mode::Normal;
 
-                let id = self.id;
                 match self.get_parent() {
                     Some(p) => {
-                        let pid = p.id;
+                        let pid = p.raw_id();
                         libx::reparent(context, id, pid, 0, 0);
                         p.update_layout();
                     }

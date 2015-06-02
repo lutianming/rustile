@@ -50,7 +50,7 @@ pub fn decorate(client: &Container, focused: bool) {
     let gc = context.gc;
 
     let pid = match client.get_parent() {
-        Some(p) => { p.id }
+        Some(p) => { p.raw_id() }
         None => { context.root }
     };
 
@@ -91,10 +91,10 @@ pub fn decorate(client: &Container, focused: bool) {
                 let offset_x = 10;
                 let offset_y = 10;
 
-                let res = libx::get_text_property(context, client.id, xlib::XA_WM_NAME);
+                let res = libx::get_text_property(context, client.raw_id(), xlib::XA_WM_NAME);
                 match res {
                     Some(s) => {
-                        println!("window {} {}", client.id, s);
+                        println!("window {} {}", client.raw_id(), s);
                         // let s = "标题";
                         let size = s.len() as i32;
                         let title = ffi::CString::new(s).unwrap().as_ptr();
@@ -137,13 +137,14 @@ fn layout_tiling(container: &mut Container) {
         return;
     }
 
-    let attrs = libx::get_window_attributes(container.context, container.id);
+    let attrs = libx::get_window_attributes(container.context, container.raw_id());
 
     let width = attrs.width  / size as libc::c_int;
     let height = attrs.height / size as libc::c_int;
     let (focus_id,_) = libx::get_input_focus(container.context);
 
     for (i, client) in container.clients.iter_mut().enumerate() {
+        let id = client.raw_id();
         let mut x = 0;
         let mut y = 0;
         let mut w = attrs.width;
@@ -169,7 +170,7 @@ fn layout_tiling(container: &mut Container) {
         });
 
         let titlebar_height = client.titlebar.unwrap().height;
-        decorate(client, client.id==focus_id);;
+        decorate(client, id==focus_id);;
 
         h = h - titlebar_height as i32;
         client.configure(x, y+titlebar_height as i32,
@@ -184,11 +185,12 @@ fn layout_tab(container: &mut Container) {
         return;
     }
 
-    let attrs = libx::get_window_attributes(container.context, container.id);
+    let attrs = libx::get_window_attributes(container.context, container.raw_id());
     let width = attrs.width/size as i32;
     let (focus_id,_) = libx::get_input_focus(container.context);
 
     for (i, client) in container.clients.iter_mut().enumerate() {
+        let id = client.raw_id();
         client.titlebar = Some(Rectangle {
             x: width*i as i32,
             y: 0,
@@ -197,14 +199,14 @@ fn layout_tab(container: &mut Container) {
         });
 
         let titlebar_height = client.titlebar.unwrap().height;
-        decorate(client, client.id==focus_id);
+        decorate(client, id==focus_id);
 
         client.configure(0, titlebar_height as i32,
                          attrs.width as usize,
                          (attrs.height-titlebar_height as i32) as usize);
-        if focus_id == client.id {
+        if focus_id == id {
             // client.map();
-            libx::raise_window(client.context, client.id);
+            libx::raise_window(client.context, id);
         }
         else{
             // client.unmap();

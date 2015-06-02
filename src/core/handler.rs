@@ -131,7 +131,7 @@ impl Handler for WindowToWorkspaceHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         let id = match workspaces.get_focus() {
             Some(container) => {
-                container.id
+                container.raw_id()
             }
             None => { return }
         };
