@@ -2,10 +2,6 @@ extern crate libc;
 extern crate x11;
 
 use x11::xlib;
-
-use std::rc::{ Rc, Weak };
-use std::cell::RefCell;
-use std::boxed::Box;
 use std::ptr;
 use super::layout;
 use super::super::libx;
