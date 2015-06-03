@@ -35,15 +35,16 @@ impl Config {
     pub fn load() -> Config {
         let mut config = Config::default();
 
-        let home = match env::var_os("HOME") {
-            Some(v) => v,
+        let mut pathbuf = match env::var_os("HOME") {
+            Some(v) => {
+                PathBuf::from(v)
+            }
             None => {
                 // can't find HOME, return default config
                 return config;
             }
         };
 
-        let mut pathbuf = PathBuf::from(home);
         pathbuf.push(".rustile");
         match File::open(pathbuf.as_path()) {
             Ok(f) => {
