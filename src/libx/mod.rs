@@ -382,7 +382,7 @@ pub fn configure_window(context: Context, window: Window, mask:c_uint, mut chang
     }
 }
 
-pub fn resize_window(context: Context, window: Window, x: i32, y: i32, width: usize, height: usize) {
+pub fn resize_window(context: Context, window: Window, x: i32, y: i32, width: u32, height: u32) {
     println!("resize {}", window);
     let mask = CWX | CWY | CWHeight | CWWidth;
 
@@ -497,15 +497,15 @@ pub fn default_gc(context: Context, screen_num: c_int) -> xlib::GC{
 }
 
 
-pub fn display_height(context: Context, screen_num: c_int) -> c_int{
+pub fn display_height(context: Context, screen_num: c_int) -> u32{
     unsafe{
-        xlib::XDisplayHeight(context.display, screen_num)
+        xlib::XDisplayHeight(context.display, screen_num) as u32
     }
 }
 
-pub fn display_width(context: Context, screen_num: c_int) -> c_int{
+pub fn display_width(context: Context, screen_num: c_int) -> u32{
     unsafe{
-        xlib::XDisplayWidth(context.display, screen_num)
+        xlib::XDisplayWidth(context.display, screen_num) as u32
     }
 }
 

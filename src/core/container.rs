@@ -16,7 +16,7 @@ pub enum Mode {
 pub struct Container {
     pub id: Option<xlib::Window>,
     pub visible: bool,
-    pub titlebar_height: usize,
+    pub titlebar_height: u32,
     parent: *mut Container,
     pub clients: Vec<Container>,
     pub mode: Mode,
@@ -229,7 +229,7 @@ impl Container {
         self.clients.iter().position(|x| (*x).raw_id() == id)
     }
 
-    pub fn configure(&mut self, x: i32, y: i32, width: usize, height: usize) {
+    pub fn configure(&mut self, x: i32, y: i32, width: u32, height: u32) {
         libx::resize_window(self.context, self.raw_id(), x, y, width, height);
         // layout for children clients
         self.update_layout();
@@ -326,14 +326,14 @@ impl Container {
         // add to parent
         match self.get_parent() {
             Some(p) => {
-                let attrs = libx::get_window_attributes(self.context, self.raw_id());
+                let attrs = self.rec();
 
                 libx::reparent(self.context, container.raw_id(), p.raw_id(),
                                0, 0);
                 // configure to the same size and position like old one
                 container.configure(attrs.x, attrs.y,
-                                    attrs.width as usize,
-                                    attrs.height as usize);
+                                    attrs.width,
+                                    attrs.height);
             }
             None => {}
         }
@@ -388,8 +388,8 @@ impl Container {
                 let width = libx::display_width(context, context.screen_num);
                 let height = libx::display_height(context, context.screen_num);
                 libx::resize_window(context, id, 0, 0,
-                                    width as usize,
-                                    height as usize);
+                                    width,
+                                    height);
             }
             Mode::Fullscreen => {
                 self.mode = Mode::Normal;
@@ -422,6 +422,16 @@ impl Container {
             }
         }
         None
+    }
+
+    pub fn rec(&self) -> layout::Rectangle {
+        let attrs = libx::get_window_attributes(self.context, self.raw_id());
+        layout::Rectangle {
+            x: attrs.x,
+            y: attrs.y,
+            width: attrs.width as u32,
+            height: attrs.height as u32
+        }
     }
 }
 

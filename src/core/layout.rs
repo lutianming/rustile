@@ -21,8 +21,8 @@ const CWStackMode: libc::c_uint = 1<<6;
 pub struct Rectangle {
     pub x: i32,
     pub y: i32,
-    pub width: usize,
-    pub height: usize,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl Rectangle {
@@ -132,31 +132,34 @@ pub fn update_layout(container: &mut Container) {
 }
 
 fn layout_tiling(container: &mut Container) {
-    let size = container.clients.len();
+    let size = container.clients.len() as u32;
     if size == 0 {
         return;
     }
 
-    let attrs = libx::get_window_attributes(container.context, container.raw_id());
+    let attrs = container.rec();
 
-    let width = attrs.width  / size as libc::c_int;
-    let height = attrs.height / size as libc::c_int;
+    let width = attrs.width  / size;
+    let height = attrs.height / size;
+    let x_offset = attrs.x;
+    let y_offset = attrs.y;
+
     let (focus_id,_) = libx::get_input_focus(container.context);
 
     for (i, client) in container.clients.iter_mut().enumerate() {
         let id = client.raw_id();
-        let mut x = 0;
-        let mut y = 0;
+        let mut x = x_offset;
+        let mut y = y_offset;
         let mut w = attrs.width;
         let mut h = attrs.height;
 
         match container.direction {
             Direction::Vertical => {
-                y = height * i as libc::c_int;
+                y = y + (height * i as u32) as i32;
                 h = height;
             }
             Direction::Horizontal => {
-                x = width * i as libc::c_int;
+                x = x + (width * i as u32) as i32;
                 w = width;
             }
             _ => {}
@@ -165,45 +168,48 @@ fn layout_tiling(container: &mut Container) {
         client.titlebar = Some(Rectangle {
             x: x,
             y: y,
-            width: w as usize,
+            width: w,
             height: client.titlebar_height,
         });
 
         let titlebar_height = client.titlebar.unwrap().height;
         decorate(client, id==focus_id);;
 
-        h = h - titlebar_height as i32;
+        h = h - titlebar_height;
         client.configure(x, y+titlebar_height as i32,
-                         w as usize, h as usize);
+                         w, h);
         // client.map();
     }
 }
 
 fn layout_tab(container: &mut Container) {
-    let size = container.clients.len();
+    let size = container.size() as u32;
     if size == 0{
         return;
     }
 
-    let attrs = libx::get_window_attributes(container.context, container.raw_id());
-    let width = attrs.width/size as i32;
+    let attrs = container.rec();
+
+    let width = attrs.width / size;
+    let x_offset = attrs.x;
+    let y_offset = attrs.y;
     let (focus_id,_) = libx::get_input_focus(container.context);
 
     for (i, client) in container.clients.iter_mut().enumerate() {
         let id = client.raw_id();
         client.titlebar = Some(Rectangle {
-            x: width*i as i32,
-            y: 0,
-            width: width as usize,
+            x: x_offset + (width * i as u32) as i32,
+            y: y_offset as i32,
+            width: width,
             height: client.titlebar_height,
         });
 
         let titlebar_height = client.titlebar.unwrap().height;
         decorate(client, id==focus_id);
 
-        client.configure(0, titlebar_height as i32,
-                         attrs.width as usize,
-                         (attrs.height-titlebar_height as i32) as usize);
+        client.configure(x_offset, y_offset+titlebar_height as i32,
+                         attrs.width,
+                         attrs.height -titlebar_height);
         if focus_id == id {
             // client.map();
             libx::raise_window(client.context, id);

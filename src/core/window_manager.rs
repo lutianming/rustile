@@ -159,7 +159,7 @@ impl WindowManager {
             libx::select_input(self.context, container.raw_id(), mask);
 
             if self.config.titlebar_height > 0 {
-                container.titlebar_height = self.config.titlebar_height as usize;
+                container.titlebar_height = self.config.titlebar_height;
             }
             self.workspaces.insert_window(container);
         }
