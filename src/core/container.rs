@@ -3,7 +3,7 @@ extern crate x11;
 
 use x11::xlib;
 use std::ptr;
-use super::layout;
+use super::layout::{ self, Rectangle };
 use super::super::libx;
 
 pub const TITLE_HEIGHT: libc::c_int = 20;
@@ -20,7 +20,7 @@ pub struct Container {
     parent: *mut Container,
     pub clients: Vec<Container>,
     pub mode: Mode,
-    pub titlebar: Option<layout::Rectangle>,
+    pub titlebar: Option<Rectangle>,
     pub context: libx::Context,
 
     pub layout: layout::Type,
@@ -41,8 +41,8 @@ impl Container {
 
         let id = libx::create_window(context, pid,
                                      attrs.x, attrs.y,
-                                     attrs.width as libc::c_uint,
-                                     attrs.height as libc::c_uint);
+                                     attrs.width as u32,
+                                     attrs.height as u32);
         libx::select_input(context, id, xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask | xlib::ButtonPressMask);
         Container {
             context: context,

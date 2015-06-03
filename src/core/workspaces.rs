@@ -4,7 +4,7 @@ extern crate libc;
 use std::collections::HashMap;
 // use super::Window;
 use x11::xlib::{Window};
-use super::Container;
+use super::container::{ self, Container };
 use super::super::libx;
 use super::super::libx::{ Context };
 

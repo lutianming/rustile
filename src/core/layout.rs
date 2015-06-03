@@ -141,8 +141,8 @@ fn layout_tiling(container: &mut Container) {
 
     let width = attrs.width  / size;
     let height = attrs.height / size;
-    let x_offset = attrs.x;
-    let y_offset = attrs.y;
+    let x_offset = 0; //attrs.x;
+    let y_offset = 0; //attrs.y;
 
     let (focus_id,_) = libx::get_input_focus(container.context);
 
@@ -191,8 +191,8 @@ fn layout_tab(container: &mut Container) {
     let attrs = container.rec();
 
     let width = attrs.width / size;
-    let x_offset = attrs.x;
-    let y_offset = attrs.y;
+    let x_offset = 0; //attrs.x;
+    let y_offset = 0; //attrs.y;
     let (focus_id,_) = libx::get_input_focus(container.context);
 
     for (i, client) in container.clients.iter_mut().enumerate() {
