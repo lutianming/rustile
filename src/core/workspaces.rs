@@ -30,6 +30,7 @@ impl Workspaces {
 
     pub fn create(&mut self, key: char) {
         let mut space = Container::new(self.context);
+        space.category = container::Type::Workspace;
         self.spaces.insert(key, space);
     }
 

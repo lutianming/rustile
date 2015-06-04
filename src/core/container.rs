@@ -13,6 +13,12 @@ pub enum Mode {
     Fullscreen,
 }
 
+pub enum Type {
+    App,
+    Container,
+    Workspace,
+}
+
 pub struct Container {
     pub id: Option<xlib::Window>,
     pub visible: bool,
@@ -20,6 +26,7 @@ pub struct Container {
     parent: *mut Container,
     pub clients: Vec<Container>,
     pub mode: Mode,
+    pub category: Type,
     pub titlebar: Option<Rectangle>,
     pub portion: f32,
     pub context: libx::Context,
@@ -69,6 +76,7 @@ impl Container {
             visible: false,
             id: Some(id),
             mode: Mode::Normal,
+            category: Type::App,
             parent: ptr::null_mut(),
             titlebar: None,
             titlebar_height: 0,
@@ -326,7 +334,7 @@ impl Container {
     }
 
     pub fn split(&mut self) -> bool {
-        if !self.is_empty() {
+        if !self.is_empty() || self.raw_id() == self.context.root {
             return false;
         }
 
