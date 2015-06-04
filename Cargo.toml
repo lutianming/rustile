@@ -9,7 +9,7 @@ log = "*"
 env_logger = "*"
 
 [dependencies.x11]
-features = ["xlib"]
+features = ["xlib", "xmu"]
 
 [[bin]]
 name = "rustile"

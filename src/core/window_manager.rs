@@ -1,4 +1,5 @@
 extern crate libc;
+extern crate x11;
 
 use std::ptr;
 use x11::xlib;
@@ -17,6 +18,7 @@ unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XE
     //     }
     //     _ => {}
     // }
+    x11::xmu::XmuSimpleErrorHandler(display, event);
     1
 }
 
@@ -376,7 +378,7 @@ impl WindowManager {
         let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask | xlib::ButtonPressMask;
 
         unsafe{
-            // xlib::XSetErrorHandler(Some(error_handler));
+            xlib::XSetErrorHandler(Some(error_handler));
         }
         let left_ptr: u32 = 68;
         libx::define_cursor(self.context, self.context.root, left_ptr);
