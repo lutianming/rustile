@@ -67,7 +67,8 @@ pub fn decorate(client: &Container, focused: bool) {
                     xlib::XSetBackground(context.display, gc,
                                          context.unfocus_bg);
                     xlib::XSetForeground(context.display, gc,
-                                         context.unfocus_fg);                            }
+                                         context.unfocus_fg);
+                }
 
                 let r = xlib::XFillRectangle(context.display,
                                              pid, gc,
@@ -132,35 +133,35 @@ pub fn update_layout(container: &mut Container) {
 }
 
 fn layout_tiling(container: &mut Container) {
-    let size = container.clients.len() as u32;
+    let size = container.size() as u32;
     if size == 0 {
         return;
     }
 
     let attrs = container.rec();
 
-    let width = attrs.width  / size;
-    let height = attrs.height / size;
     let x_offset = 0; //attrs.x;
     let y_offset = 0; //attrs.y;
 
     let (focus_id,_) = libx::get_input_focus(container.context);
 
+    let mut x = x_offset;
+    let mut y = y_offset;
+    let mut w: u32 = 0;
+    let mut h: u32 = 0;
     for (i, client) in container.clients.iter_mut().enumerate() {
         let id = client.raw_id();
-        let mut x = x_offset;
-        let mut y = y_offset;
-        let mut w = attrs.width;
-        let mut h = attrs.height;
 
         match container.direction {
             Direction::Vertical => {
-                y = y + (height * i as u32) as i32;
-                h = height;
+                y = y + h as i32;
+                h = (attrs.height as f32 * client.portion) as u32;
+                w = attrs.width;
             }
             Direction::Horizontal => {
-                x = x + (width * i as u32) as i32;
-                w = width;
+                x = x + w as i32;
+                w = (attrs.width as f32 * client.portion) as u32;
+                h = attrs.height;
             }
             _ => {}
         };
@@ -175,9 +176,8 @@ fn layout_tiling(container: &mut Container) {
         let titlebar_height = client.titlebar.unwrap().height;
         decorate(client, id==focus_id);;
 
-        h = h - titlebar_height;
         client.configure(x, y+titlebar_height as i32,
-                         w, h);
+                         w, h-titlebar_height);
         // client.map();
     }
 }

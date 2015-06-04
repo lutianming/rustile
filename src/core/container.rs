@@ -21,6 +21,7 @@ pub struct Container {
     pub clients: Vec<Container>,
     pub mode: Mode,
     pub titlebar: Option<Rectangle>,
+    pub portion: f32,
     pub context: libx::Context,
 
     pub layout: layout::Type,
@@ -54,6 +55,7 @@ impl Container {
             parent: ptr::null_mut(),
             titlebar: None,
             titlebar_height: 0,
+            portion: 1.0,
 
             layout: layout::Type::Tiling,
             direction: layout::Direction::Horizontal,
@@ -70,6 +72,7 @@ impl Container {
             parent: ptr::null_mut(),
             titlebar: None,
             titlebar_height: 0,
+            portion: 1.0,
 
             layout: layout::Type::Tiling,
             direction: layout::Direction::Horizontal,
@@ -140,11 +143,21 @@ impl Container {
 
     pub fn add(&mut self, mut client: Container) {
         self.be_parent(&mut client);
+        let portion = 1.0 / (self.size() as f32 + 1.0);
+        for client in self.clients.iter_mut() {
+            client.portion = client.portion * (1.0-portion);
+        }
+        client.portion = portion;
         self.clients.push(client);
     }
 
     pub fn insert(&mut self, index: usize,  mut client: Container) {
         self.be_parent(&mut client);
+        let portion = 1.0 / (self.size() as f32 + 1.0);
+        for client in self.clients.iter_mut() {
+            client.portion = client.portion * (1.0-portion);
+        }
+        client.portion = portion;
         self.clients.insert(index, client);
     }
 
