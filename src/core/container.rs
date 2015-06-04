@@ -95,16 +95,6 @@ impl Container {
     }
 
     pub fn raw_id(&self) -> xlib::Window {
-        // let mut id: xlib::Window = 0;
-        // if self.id.is_some() {
-        //     id = self.id.unwrap();
-        // }
-        // if self.display.is_some() {
-        //     id = unsafe {
-        //         self.display.as_ref().unwrap().get_window().unwrap().platform_window() as xlib::Window
-        //     };
-        // };
-        // id
         self.id.unwrap()
     }
 
@@ -154,10 +144,10 @@ impl Container {
     pub fn insert(&mut self, index: usize,  mut client: Container) {
         self.be_parent(&mut client);
         let portion = 1.0 / (self.size() as f32 + 1.0);
+        client.portion = portion;
         for client in self.clients.iter_mut() {
             client.portion = client.portion * (1.0-portion);
         }
-        client.portion = portion;
         self.clients.insert(index, client);
     }
 
@@ -165,29 +155,35 @@ impl Container {
         let res = self.contain(id);
         match res {
             Some(index) => {
-                let r = self.clients.remove(index);
-                Some(r)
+                self.remove_by_index(index)
             }
             None => {
-                // for c in self.clients.iter_mut() {
-                //     let r = c.remove(id);
-                //     if r.is_some(){
-                //         return r;
-                //     }
-                // }
                 None
             }
+        }
+    }
+
+    fn remove_by_index(&mut self, index: usize) -> Option<Container>{
+        if index >= self.size() {
+            None
+        }
+        else{
+            let r = self.clients.remove(index);
+            let portion = 1.0 - r.portion;
+            for client in self.clients.iter_mut() {
+                client.portion = client.portion / portion;
+            }
+            Some(r)
         }
     }
 
     /// remove App container and destroy all its parent containers that are empty
     pub fn tree_remove(&mut self, id: xlib::Window) -> Option<Container> {
         println!("try remove {} from {}", id, self.raw_id());
-        let res = self.contain(id);
+        let res = self.remove(id);
         match res {
-            Some(i) => {
-                let r = self.clients.remove(i);
-                Some(r)
+            Some(c) => {
+                Some(c)
             }
             None => {
                 let mut r: Option<Container> = None;
@@ -203,8 +199,8 @@ impl Container {
                     let i = index as usize;
                     let size = self.get_child(i).unwrap().size();
                     if size == 0 {
-                        let container = self.clients.remove(i);
-                        container.destroy();
+                        let container = self.remove_by_index(i);
+                        container.unwrap().destroy();
                     }
                 }
                 r
