@@ -13,21 +13,11 @@ use x11::xlib;
 use std::boxed::Box;
 
 use super::layout;
-use super::handler::{
-    KeyBind,
-    Handler,
-    ExecHandler,
-    LayoutHandler,
-    WorkspaceHandler,
-    WindowToWorkspaceHandler,
-    WindowFocusHandler,
-    WindowCloseHandler,
-    FullscreenHandler,
-    SplitHandler};
+use super::handler::{self, KeyBind};
 
 pub struct Config {
     mod_key: u32,
-    pub bindsyms: HashMap<KeyBind, Box<Handler>>,
+    pub bindsyms: HashMap<KeyBind, Box<handler::Handler>>,
     pub titlebar_height: u32,
 }
 
@@ -93,7 +83,7 @@ impl Config {
                     }
                 }
                 "exec" => {
-                    let mut handler = ExecHandler::new(args);
+                    let mut handler = handler::ExecHandler::new(args);
                     handler.cmd.spawn();
                 }
                 "bind" => {
@@ -116,7 +106,7 @@ impl Config {
         match name[0] {
             "exec" => {
                 println!("exec");
-                let handler = ExecHandler::new(args);
+                let handler = handler::ExecHandler::new(args);
                 self.bindsyms.insert(bind, Box::new(handler));
             }
             "layout" => {
@@ -124,22 +114,22 @@ impl Config {
                 let layout = args[0];
                 match layout {
                     "split" => {
-                        let handler = LayoutHandler::new(layout::Type::Tiling);
+                        let handler = handler::LayoutHandler::new(layout::Type::Tiling);
                         self.bindsyms.insert(bind, Box::new(handler));
                     }
                     "tab" => {
-                        let handler = LayoutHandler::new(layout::Type::Tab);
+                        let handler = handler::LayoutHandler::new(layout::Type::Tab);
                         self.bindsyms.insert(bind, Box::new(handler));
                     }
                     _ => {}
                 }
             }
             "fullscreen" => {
-                let handler = FullscreenHandler;
+                let handler = handler::FullscreenHandler;
                 self.bindsyms.insert(bind, Box::new(handler));
             }
             "split" => {
-                let handler = SplitHandler;
+                let handler = handler::SplitHandler;
                 self.bindsyms.insert(bind, Box::new(handler));
             }
             "workspace" => {
@@ -147,7 +137,7 @@ impl Config {
                 let c = args[0].chars().nth(0);
                 match c {
                     Some(v) => {
-                        let handler = WorkspaceHandler {
+                        let handler = handler::WorkspaceHandler {
                             key: v,
                         };
                         self.bindsyms.insert(bind, Box::new(handler));
@@ -160,7 +150,7 @@ impl Config {
                 match c {
                     Some(v) => {
                         println!("window");
-                        let handler = WindowToWorkspaceHandler {
+                        let handler = handler::WindowToWorkspaceHandler {
                             key: v,
                         };
                         self.bindsyms.insert(bind, Box::new(handler));
@@ -176,13 +166,13 @@ impl Config {
                     "down" => layout::Direction::Down,
                     _ => layout::Direction::Right
                 };
-                let handler = WindowFocusHandler {
+                let handler = handler::WindowFocusHandler {
                     direction: direction
                 };
                 self.bindsyms.insert(bind, Box::new(handler));
             }
             "kill" => {
-                let handler = WindowCloseHandler;
+                let handler = handler::WindowCloseHandler;
                 self.bindsyms.insert(bind, Box::new(handler));
             }
             _ => {}
