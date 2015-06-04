@@ -15,7 +15,12 @@ bind $mod+4 window 2
 bind $mod+5 focus left
 bind $mod+6 focus right
 
-bind $mod+7 kill
+bind $mod+Shift+q kill
 bind $mod+v split
+
+bind $mod+j resize shrink width
+bind $mod+k resize grow height
+bind $mod+l resize shrink height
+bind $mod+; resize shrink width
 
 exec pwd

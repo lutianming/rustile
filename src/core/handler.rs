@@ -9,9 +9,8 @@ use x11::xlib;
 use super::WindowManager;
 use super::Workspaces;
 use super::container;
-use super::layout;
-use super::super::libx;
-use super::super::libx::Context;
+use super::layout::{self, Direction};
+use super::super::libx::{self, Context};
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 pub struct KeyBind {
@@ -75,6 +74,76 @@ pub struct WindowFocusHandler {
 
 pub struct WindowCloseHandler;
 pub struct SplitHandler;
+
+pub enum Resize {
+    Shrink,
+    Grow,
+}
+
+pub struct WindowResizeHandler {
+    pub direction: layout::Direction,
+    pub resize: Resize
+}
+
+impl Handler for WindowResizeHandler {
+    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+        let focused = workspaces.get_focus();
+        if focused.is_some() {
+            let c = focused.unwrap();
+            let parent = c.get_parent();
+            if parent.is_some() {
+                let p = parent.unwrap();
+                let index = p.contain(c.raw_id()).unwrap();
+                if p.direction == self.direction {
+                    let step:f32 = match self.resize {
+                        Resize::Shrink => {
+                            -0.05
+                        }
+                        Resize::Grow => {
+                            0.05
+                        }
+                    };
+
+                    if index > 0 && index < (p.size() - 1) {
+                        {
+                            let last = p.clients.get_mut(index-1).unwrap();
+                            last.portion = last.portion - step;
+                        }
+                        {
+                            let next = p.clients.get_mut(index+1).unwrap();                         next.portion = next.portion - step;
+                        }
+                        {
+                            let tmp = p.clients.get_mut(index).unwrap();
+                            tmp.portion = tmp.portion + step*2.0;
+                        }
+                    }
+                    else if index > 0 {
+                        {
+                            let last = p.clients.get_mut(index-1).unwrap();
+                            last.portion = last.portion - step * 2.0;
+                        }
+                        {
+                            let tmp = p.clients.get_mut(index).unwrap();
+                            tmp.portion = tmp.portion + step*2.0;
+                        }
+                    }
+                    else if index < (p.size() - 1) {
+                        {
+                            let next = p.clients.get_mut(index+1).unwrap();
+                            next.portion = next.portion - step * 2.0;
+                        }
+                        {
+                            let tmp = p.clients.get_mut(index).unwrap();
+                            tmp.portion = tmp.portion + step*2.0;
+                        }
+                    }
+                    p.update_layout();
+                }
+
+            }
+        }
+    }
+}
 
 impl Handler for SplitHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {

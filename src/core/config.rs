@@ -158,6 +158,31 @@ impl Config {
                     None => {}
                 }
             }
+            "resize" => {
+                let resize = match args[0] {
+                    "shrink" => {
+                        handler::Resize::Shrink
+                    }
+                    "grow" => {
+                        handler::Resize::Grow
+                    }
+                    _ => { handler::Resize::Grow }
+                };
+                let direction = match args[1] {
+                    "width" => {
+                        layout::Direction::Vertical
+                    }
+                    "height" => {
+                        layout::Direction::Horizontal
+                    }
+                    _ => { layout::Direction::Horizontal }
+                };
+                let handler = handler::WindowResizeHandler {
+                    direction: direction,
+                    resize: resize
+                };
+                self.bindsyms.insert(bind, Box::new(handler));
+            }
             "focus" => {
                 let direction = match args[0] {
                     "left" => layout::Direction::Left,
