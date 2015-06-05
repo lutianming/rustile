@@ -17,6 +17,8 @@ const CWBorderWidth: libc::c_uint = 1<<4;
 const CWSibling: libc::c_uint =	1<<5;
 const CWStackMode: libc::c_uint = 1<<6;
 
+const border: u32 = 1;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Rectangle {
     pub x: i32,
@@ -89,14 +91,19 @@ pub fn decorate(client: &Container, focused: bool) {
                                          context.font_color);
                 }
 
+                if focused {
+                    set_border(client, border, context.focus_fg)
+                }
+                else {
+                    set_border(client, border, context.unfocus_fg)
+                }
+
                 let offset_x = 10;
                 let offset_y = 10;
 
                 let res = libx::get_text_property(context, client.raw_id(), xlib::XA_WM_NAME);
                 match res {
                     Some(s) => {
-                        println!("window {} {}", client.raw_id(), s);
-                        // let s = "标题";
                         let size = s.len() as i32;
                         let title = ffi::CString::new(s).unwrap().as_ptr();
 
@@ -113,6 +120,16 @@ pub fn decorate(client: &Container, focused: bool) {
         }
         None => {}
     }
+}
+
+fn set_border(container: &Container, border_width: u32, pixel: u64) {
+    let mut attrs: xlib::XSetWindowAttributes = unsafe {mem::zeroed()};
+    attrs.border_pixel = pixel;
+    libx::set_window_attributes(container.context, container.raw_id(), xlib::CWBorderPixel, attrs);
+
+    let mut change: xlib::XWindowChanges = unsafe {mem::zeroed()};
+    change.border_width = border_width as i32;
+    libx::configure_window(container.context, container.raw_id(), CWBorderWidth, change);
 }
 
 #[derive(PartialEq, Clone)]
@@ -176,8 +193,9 @@ fn layout_tiling(container: &mut Container) {
         let titlebar_height = client.titlebar.unwrap().height;
         decorate(client, id==focus_id);;
 
-        client.configure(x, y+titlebar_height as i32,
-                         w, h-titlebar_height);
+        client.configure(x+border as i32,
+                         y+titlebar_height as i32 + border as i32,
+                         w-border*2, h-titlebar_height-border*2);
         // client.map();
     }
 }
@@ -207,9 +225,10 @@ fn layout_tab(container: &mut Container) {
         let titlebar_height = client.titlebar.unwrap().height;
         decorate(client, id==focus_id);
 
-        client.configure(x_offset, y_offset+titlebar_height as i32,
-                         attrs.width,
-                         attrs.height -titlebar_height);
+        client.configure(x_offset + border as i32,
+                         y_offset+titlebar_height as i32 + border as i32,
+                         attrs.width - border*2 ,
+                         attrs.height -titlebar_height - border*2);
         if focus_id == id {
             // client.map();
             libx::raise_window(client.context, id);
