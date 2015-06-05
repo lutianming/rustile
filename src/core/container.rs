@@ -252,6 +252,20 @@ impl Container {
         self.update_layout();
     }
 
+    pub fn resize_children(&mut self, index: usize, neighbor: usize, step: f32) {
+        let size = self.size();
+        if index >= 0 && index < size && neighbor >= 0 && neighbor < size {
+            {
+                let mut a = self.clients.get_mut(index).unwrap();
+                a.portion = a.portion + step;
+            }
+            {
+                let mut b = self.clients.get_mut(neighbor).unwrap();
+                b.portion = b.portion - step;
+            }
+        }
+    }
+
     pub fn update_layout(&mut self) {
         layout::update_layout(self);
     }

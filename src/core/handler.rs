@@ -105,37 +105,14 @@ impl Handler for WindowResizeHandler {
                     };
 
                     if index > 0 && index < (p.size() - 1) {
-                        {
-                            let last = p.clients.get_mut(index-1).unwrap();
-                            last.portion = last.portion - step;
-                        }
-                        {
-                            let next = p.clients.get_mut(index+1).unwrap();                         next.portion = next.portion - step;
-                        }
-                        {
-                            let tmp = p.clients.get_mut(index).unwrap();
-                            tmp.portion = tmp.portion + step*2.0;
-                        }
+                        p.resize_children(index, index-1, step);
+                        p.resize_children(index, index+1, step);
                     }
                     else if index > 0 {
-                        {
-                            let last = p.clients.get_mut(index-1).unwrap();
-                            last.portion = last.portion - step * 2.0;
-                        }
-                        {
-                            let tmp = p.clients.get_mut(index).unwrap();
-                            tmp.portion = tmp.portion + step*2.0;
-                        }
+                        p.resize_children(index, index-1, step*2.0);
                     }
                     else if index < (p.size() - 1) {
-                        {
-                            let next = p.clients.get_mut(index+1).unwrap();
-                            next.portion = next.portion - step * 2.0;
-                        }
-                        {
-                            let tmp = p.clients.get_mut(index).unwrap();
-                            tmp.portion = tmp.portion + step*2.0;
-                        }
+                        p.resize_children(index, index+1, step*2.0);
                     }
                     p.update_layout();
                 }
