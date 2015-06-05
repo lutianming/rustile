@@ -22,16 +22,22 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load() -> Config {
-        let mut config = Config::default();
+    pub fn new() -> Config {
+        Config {
+            mod_key: xlib::Mod4Mask,
+            bindsyms: HashMap::new(),
+            titlebar_height: 20,
+        }
+    }
 
+    pub fn load(&mut self) {
         let mut pathbuf = match env::var_os("HOME") {
             Some(v) => {
                 PathBuf::from(v)
             }
             None => {
-                // can't find HOME, return default config
-                return config;
+                // can't find HOME, do nothing
+                return;
             }
         };
 
@@ -42,7 +48,7 @@ impl Config {
                 for line in buf.lines() {
                     match line {
                         Ok(s) => {
-                            config.parse_line(s);
+                            self.parse_line(s);
                         }
                         Err(err) => {
                             // do nothing
@@ -55,20 +61,6 @@ impl Config {
                 println!("no config file");
             }
         }
-        config
-    }
-
-    pub fn default() -> Config {
-        let mut config = Config {
-            mod_key: xlib::Mod4Mask,
-            bindsyms: HashMap::new(),
-            titlebar_height: 20,
-        };
-        // let dmenu = vec!["$mod+c", "exec", "dmenu_run"];
-        // let split = vec!["$mod+b", "layout", "split"];
-        // config.bind_sym(&dmenu);
-        // config.bind_sym(&split);
-        config
     }
 
     fn parse_line(&mut self, line: String) {

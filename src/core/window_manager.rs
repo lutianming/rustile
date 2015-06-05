@@ -103,7 +103,7 @@ impl WindowManager {
 
 	let mut wm = WindowManager {
             context: context,
-            config: Config::load(),
+            config: Config::new(),
             workspaces: Workspaces::new(context)
         };
         wm
@@ -426,6 +426,7 @@ impl WindowManager {
     }
 
     pub fn init(&mut self) {
+        // init connection setting
         let mask = 0x1A0034;
         let mask = xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask | xlib::ButtonPressMask;
 
@@ -440,13 +441,17 @@ impl WindowManager {
         libx::select_input(self.context, self.context.root,
                            mask);
 
+        // init workspace
+        self.init_workspaces();
+
+        // load config file, run exec in config
+        self.config.load();
+
         for bind in self.config.bindsyms.keys() {
             let code = libx::keysym_to_keycode(self.context, bind.key);
             libx::grab_key(self.context, code, bind.mask, self.context.root);
         }
         libx::sync(self.context, 0);
-
-        self.init_workspaces();
     }
 
     fn init_workspaces(&mut self) {
