@@ -11,6 +11,7 @@ pub const TITLE_HEIGHT: libc::c_int = 20;
 pub enum Mode {
     Normal,
     Fullscreen,
+    Resize(usize, i32, i32),
 }
 
 pub enum Type {
@@ -51,7 +52,8 @@ impl Container {
                                      attrs.x, attrs.y,
                                      attrs.width as u32,
                                      attrs.height as u32);
-        libx::select_input(context, id, xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask | xlib::ButtonPressMask);
+        let mask = xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask | xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::Button1MotionMask | xlib::Button2MotionMask;
+        libx::select_input(context, id, mask);
         Container {
             context: context,
             clients: Vec::new(),
@@ -256,6 +258,14 @@ impl Container {
         let size = self.size();
         if index >= 0 && index < size && neighbor >= 0 && neighbor < size {
             {
+                let a = self.clients.get(index).unwrap();
+                let b = self.clients.get(neighbor).unwrap();
+                if (a.portion + step) <= 0.0 || (b.portion - step) < 0.0 {
+                    return
+                }
+            }
+
+            {
                 let mut a = self.clients.get_mut(index).unwrap();
                 a.portion = a.portion + step;
             }
@@ -437,6 +447,7 @@ impl Container {
                     }
                 };
             }
+            _ => {}
         }
     }
 
@@ -450,6 +461,27 @@ impl Container {
                     }
                 }
                 None => {}
+            }
+        }
+        None
+    }
+
+    // decide if the point is on the border
+    pub fn query_border(&self, x: i32, y: i32) -> Option<usize> {
+        for (i, client) in self.clients.iter().enumerate() {
+            let rec = client.rec();
+            match self.direction {
+                layout::Direction::Vertical => {
+                    if (y-rec.y).abs() <= 2 {
+                        return Some(i)
+                    }
+                }
+                layout::Direction::Horizontal => {
+                    if (x-rec.x).abs() <= 2 {
+                        return Some(i)
+                    }
+                }
+                _ => {}
             }
         }
         None

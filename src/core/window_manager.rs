@@ -7,7 +7,8 @@ use x11::xlib::Window;
 use super::super::libx;
 
 use super::config::Config;
-use super::Container;
+use super::container::{self, Container};
+use super::layout;
 use super::Workspaces;
 use super::handler;
 
@@ -206,27 +207,77 @@ impl WindowManager {
     }
 
     pub fn handle_button_motion(&mut self, event: &xlib::XMotionEvent) {
-        let (window, _) = libx::get_input_focus(self.context);
-        if window != event.window {
-            self.workspaces.set_focus(event.window);
-        }
+
     }
 
     pub fn handle_button_press(&mut self, event: &xlib::XButtonEvent) {
+
         let id = match self.workspaces.get_container(event.window) {
-            Some((_,container)) => {
-                let client = container.query_point(event.x, event.y);
+            Some((_,c)) => {
+                let client = c.query_point(event.x, event.y);
                 match client {
                     Some(c) => {
                         c.raw_id()
                     }
-                    None => { container.raw_id() }
+                    None => { c.raw_id() }
                 }
             }
             None => { return }
         };
         self.workspaces.set_focus(id);
+
+        // test if press on boarder
+        match self.workspaces.get_container(event.window) {
+            Some((_,c)) => {
+                let res = c.query_border(event.x, event.y);
+                match res {
+                    Some(i) => {
+                        match c.mode {
+                            container::Mode::Normal => {
+                                c.mode = container::Mode::Resize(i, event.x, event.y)
+                            }
+                            container::Mode::Resize(index, x, y) => {
+
+                            }
+                            _ => {}
+                        }
+                    }
+                    None => {}
+                }
+            }
+            None => {}
+        }
     }
+
+    pub fn handle_button_release(&mut self, event: &xlib::XButtonEvent) {
+        match self.workspaces.get_container(event.window) {
+            Some((_, c)) => {
+                match c.mode {
+                    container::Mode::Resize(index, x, y) => {
+                        let dx = event.x - x;
+                        let dy = event.y - y;
+                        let rec = c.rec();
+                        let step = match c.direction {
+                            layout::Direction::Vertical => {
+                                dy as f32 / rec.height as f32
+                            }
+                            layout::Direction::Horizontal => {
+                                dx as f32 / rec.width as f32
+                            }
+                            _ => { 0.05 }
+                        };
+
+                        c.resize_children(index-1, index, step);
+                        c.update_layout();
+                        c.mode = container::Mode::Normal;
+                    }
+                    _ => {}
+                }
+            }
+            None => {}
+        }
+    }
+
     pub fn handle_key_release(&mut self, event: &xlib::XKeyEvent) {
         if event.state > 0 {
             let sym = libx::lookup_keysym(*event, 0);
@@ -326,6 +377,7 @@ impl WindowManager {
             xlib::ButtonRelease => {
                 let mut event: xlib::XButtonEvent = From::from(e);
                 debug!("button release {}", event.window);
+                self.handle_button_release(&event);
             }
             xlib::ButtonPress => {
                 let mut event: xlib::XButtonEvent = From::from(e);
