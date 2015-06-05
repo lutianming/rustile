@@ -18,7 +18,7 @@ unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XE
     //     }
     //     _ => {}
     // }
-    x11::xmu::XmuSimpleErrorHandler(display, event);
+    // x11::xmu::XmuSimpleErrorHandler(display, event);
     1
 }
 
