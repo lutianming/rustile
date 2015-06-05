@@ -505,16 +505,26 @@ impl Container {
     }
 }
 
-// #[test]
-// fn window_eq() {
-//     use std::ptr;
-//     let c1 = libx::Context {
-//         display: ptr::null_mut()
-//     };
-//     let w1 = Window::new(c1, 1);
-//     let c2 = libx::Context {
-//         display: ptr::null_mut()
-//     };
-//     let w2 = Window::new(c2, 1);
-//     assert_eq!(w1, w2);
-// }
+#[cfg(test)]
+mod test{
+    use super::*;
+    use super::super::WindowManager;
+    use super::super::super::libx;
+
+    fn init() -> WindowManager{
+        let mut wm = WindowManager::new();
+        wm.init();
+        wm
+    }
+
+    fn clean() {
+
+    }
+
+    #[test]
+    fn new() {
+        let mut wm = init();
+        let c = Container::new(wm.context);
+        assert!(c.id.is_some());
+    }
+}
