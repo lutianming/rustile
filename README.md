@@ -9,6 +9,6 @@ The format is highly inspired by i3.
 There is a sample config file that you can start with.
 
 # TODO
-+ FIX can't detect button events
-+ add Title bar
-+ add Tab layout
++ add test cases
++ add taskbar
++ theme configuration
