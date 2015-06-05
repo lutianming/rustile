@@ -230,6 +230,13 @@ impl Container {
         }
     }
 
+    pub fn pid(&self) -> xlib::Window {
+        match self.get_parent() {
+            Some(p) => { p.raw_id() }
+            None => { self.context.root }
+        }
+    }
+
     pub fn tree_search(&mut self, id: xlib::Window) -> Option<&mut Container>{
         if self.raw_id() == id {
             return Some(self);

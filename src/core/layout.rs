@@ -48,88 +48,111 @@ pub enum Direction {
 }
 
 pub fn decorate(client: &Container, focused: bool) {
-    let context = client.context;
-    let gc = context.gc;
-
-    let pid = match client.get_parent() {
-        Some(p) => { p.raw_id() }
-        None => { context.root }
-    };
-
     match client.titlebar {
         Some(rec) => {
-            unsafe{
-                if focused {
-                    xlib::XSetBackground(context.display, gc,
-                                         context.focus_bg);
-                    xlib::XSetForeground(context.display, gc,
-                                         context.focus_fg);
-                }
-                else{
-                    xlib::XSetBackground(context.display, gc,
-                                         context.unfocus_bg);
-                    xlib::XSetForeground(context.display, gc,
-                                         context.unfocus_fg);
-                }
-
-                let r = xlib::XFillRectangle(context.display,
-                                             pid, gc,
-                                             rec.x, rec.y,
-                                             rec.width as u32,
-                                             rec.height as u32);
-
-                if focused {
-                    xlib::XSetBackground(context.display, gc,
-                                         context.focus_fg);
-                    xlib::XSetForeground(context.display, gc,
-                                         context.font_color);
-                }
-                else {
-                    xlib::XSetBackground(context.display, gc,
-                                         context.unfocus_fg);
-                    xlib::XSetForeground(context.display, gc,
-                                         context.font_color);
-                }
-
-                if focused {
-                    set_border(client, border, context.focus_fg)
-                }
-                else {
-                    set_border(client, border, context.unfocus_fg)
-                }
-
-                let offset_x = 10;
-                let offset_y = 10;
-
-                let res = libx::get_text_property(context, client.raw_id(), xlib::XA_WM_NAME);
-                match res {
-                    Some(s) => {
-                        let size = s.len() as i32;
-                        let title = ffi::CString::new(s).unwrap().as_ptr();
-
-                        let r = xlib::XmbDrawString(context.display, pid,
-                                                    context.fontset, gc,
-                                                    rec.x+offset_x, rec.y+offset_y,
-                                                    title, size);
-                    }
-                    None =>{}
-                }
-
-            }
-
+            set_titlebar(client, rec, focused);
+            set_title(client, rec, focused);
         }
         None => {}
     }
+    set_border(client, focused);
 }
 
-fn set_border(container: &Container, border_width: u32, pixel: u64) {
-    let mut attrs: xlib::XSetWindowAttributes = unsafe {mem::zeroed()};
-    attrs.border_pixel = pixel;
-    libx::set_window_attributes(container.context, container.raw_id(), xlib::CWBorderPixel, attrs);
+fn set_titlebar(client: &Container, rec: Rectangle, focused: bool) {
+    let context = client.context;
+    let gc = context.gc;
+    let display = context.display;
+    unsafe {
+        if focused {
+            xlib::XSetBackground(display, gc,
+                                 context.focus_bg);
+            xlib::XSetForeground(display, gc,
+                                 context.focus_fg);
+        }
+        else{
+            xlib::XSetBackground(display, gc,
+                                 context.unfocus_bg);
+            xlib::XSetForeground(display, gc,
+                                 context.unfocus_fg);
+        }
 
-    let mut change: xlib::XWindowChanges = unsafe {mem::zeroed()};
-    change.border_width = border_width as i32;
-    libx::configure_window(container.context, container.raw_id(), CWBorderWidth, change);
+        let pid = client.pid();
+        let r = xlib::XFillRectangle(display,
+                                     pid, gc,
+                                     rec.x, rec.y,
+                                     rec.width as u32,
+                                     rec.height as u32);
+    }
+}
+
+fn set_title(client: &Container, rec: Rectangle, focused: bool) {
+    let context = client.context;
+    let gc = context.gc;
+    let display = context.display;
+    unsafe{
+        if focused {
+            xlib::XSetBackground(display, gc,
+                                 context.focus_fg);
+            xlib::XSetForeground(display, gc,
+                                 context.font_color);
+        }
+        else {
+            xlib::XSetBackground(display, gc,
+                                 context.unfocus_fg);
+            xlib::XSetForeground(display, gc,
+                                 context.font_color);
+        }
+
+        let offset_x = 10;
+        let offset_y = 10;
+
+        let res = libx::get_text_property(context, client.raw_id(), xlib::XA_WM_NAME);
+
+        match res {
+            Some(s) => {
+                let size = s.len() as i32;
+                let title = ffi::CString::new(s).unwrap().as_ptr();
+
+                let pid = client.pid();
+                let r = xlib::XmbDrawString(display, pid,
+                                            context.fontset, gc,
+                                            rec.x+offset_x, rec.y+offset_y,
+                                            title, size);
+            }
+            None =>{}
+        }
+    }
+}
+
+fn set_border(client: &Container, focused: bool) {
+    let context = client.context;
+    let gc = context.gc;
+    let display = context.display;
+
+    unsafe {
+        if focused {
+            xlib::XSetBackground(display, gc,
+                                 context.focus_bg);
+            xlib::XSetForeground(display, gc,
+                                 context.focus_fg);
+        }
+        else{
+            xlib::XSetBackground(display, gc,
+                                 context.unfocus_bg);
+            xlib::XSetForeground(display, gc,
+                                 context.unfocus_fg);
+        }
+        xlib::XSetLineAttributes(display, gc, border, 0, 0, 0);
+
+        let pid = client.pid();
+        let rec = client.rec();
+        let r = xlib::XDrawRectangle(display,
+                                     pid, gc,
+                                     rec.x-border as i32,
+                                     rec.y-border as i32,
+                                     rec.width+border*2-1 as u32,
+                                     rec.height+border*2-1 as u32);
+    }
 }
 
 #[derive(PartialEq, Clone)]
