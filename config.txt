@@ -21,6 +21,6 @@ bind $mod+v split
 bind $mod+j resize shrink width
 bind $mod+k resize grow height
 bind $mod+l resize shrink height
-bind $mod+; resize shrink width
+bind $mod+semicolon resize grow width
 
 exec pwd
