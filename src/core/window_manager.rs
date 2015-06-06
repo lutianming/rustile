@@ -141,12 +141,12 @@ impl WindowManager {
     pub fn handle_destroy(&mut self, event: &xlib::XDestroyWindowEvent) {
         self.workspaces.remove_window(event.window);
         if self.workspaces.get_focus().is_none() {
-            self.workspaces.set_focus(self.context.root);
+            let id = self.workspaces.current().raw_id();
+            self.workspaces.set_focus(id);
         }
     }
 
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
-
         // add app top-level window to workspace
         // let window = Window::new(self.context, event.window);
         let manage = Workspaces::can_manage(self.context, event.window);
