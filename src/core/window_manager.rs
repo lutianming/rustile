@@ -371,17 +371,14 @@ impl WindowManager {
             }
             xlib::MotionNotify => {
                 let mut event: xlib::XMotionEvent = From::from(e);
-                debug!("button motion {}", event.window);
                 self.handle_button_motion(&event);
             }
             xlib::ButtonRelease => {
                 let mut event: xlib::XButtonEvent = From::from(e);
-                debug!("button release {}", event.window);
                 self.handle_button_release(&event);
             }
             xlib::ButtonPress => {
                 let mut event: xlib::XButtonEvent = From::from(e);
-                debug!("button press {}", event.window);
                 self.handle_button_press(&event);
             }
             xlib::ConfigureNotify => {
@@ -436,12 +433,9 @@ impl WindowManager {
         let left_ptr: u32 = 68;
         libx::define_cursor(self.context, self.context.root, left_ptr);
 
-
-        libx::ungrab_button(self.context, 0, 0x8000, self.context.root);
         libx::select_input(self.context, self.context.root,
                            mask);
 
-        // init workspace
         self.init_workspaces();
 
         // load config file, run exec in config
