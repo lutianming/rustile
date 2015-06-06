@@ -52,7 +52,7 @@ impl Container {
                                      attrs.x, attrs.y,
                                      attrs.width as u32,
                                      attrs.height as u32);
-        let mask = xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask | xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::Button1MotionMask | xlib::Button2MotionMask;
+        let mask = xlib::SubstructureNotifyMask | xlib::SubstructureRedirectMask | xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::Button1MotionMask | xlib::Button3MotionMask | xlib::ExposureMask;
         libx::select_input(context, id, mask);
         Container {
             context: context,
@@ -406,6 +406,11 @@ impl Container {
     pub fn unfocus(&self) {
         // libx::lower_window(self.context, self.id);
         self.decorate(false);
+    }
+
+    pub fn is_focused(&self) -> bool{
+        let (w, _) = libx::get_input_focus(self.context);
+        w == self.raw_id()
     }
 
     pub fn switch_client(&self) {

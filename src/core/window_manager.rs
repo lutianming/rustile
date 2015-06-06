@@ -146,6 +146,17 @@ impl WindowManager {
         }
     }
 
+    pub fn handle_expose(&mut self, event: &xlib::XExposeEvent) {
+        let res = self.workspaces.get_container(event.window);
+        match res {
+            Some((_, c)) => {
+                for client in c.clients.iter() {
+                    client.decorate(client.is_focused());
+                }
+            }
+            None => {}
+        }
+    }
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
         // add app top-level window to workspace
         // let window = Window::new(self.context, event.window);
@@ -344,6 +355,11 @@ impl WindowManager {
                 let event: xlib::XDestroyWindowEvent = From::from(e);
                 debug!("destroy notify {}", event.window);
                 self.handle_destroy(&event);
+            }
+            xlib::Expose => {
+                let event: xlib::XExposeEvent = From::from(e);
+                debug!("expose {}", event.window);
+                self.handle_expose(&event);
             }
             xlib::MapNotify => {
                 let event: xlib::XMapEvent = From::from(e);
