@@ -10,6 +10,7 @@ use super::config::Config;
 use super::container::{self, Container};
 use super::layout;
 use super::Workspaces;
+use super::TaskBar;
 use super::handler;
 
 unsafe extern fn error_handler(display: *mut xlib::Display, event: *mut xlib::XErrorEvent) -> libc::c_int {
@@ -434,6 +435,12 @@ impl WindowManager {
         loop {
             //handle events here
             let mut e = libx::next_event(self.context);
+            match self.workspaces.taskbar.as_mut() {
+                Some(b) => {
+                    b.handle(&e);
+                }
+                None => {}
+            }
             self.handle(e);
         }
     }
@@ -466,12 +473,14 @@ impl WindowManager {
 
     fn init_workspaces(&mut self) {
         let attrs = libx::get_window_attributes(self.context, self.context.root);
+        let taskbar_height: u32 = 20;
         self.workspaces.rec = Some(layout::Rectangle {
             x: attrs.x,
-            y: attrs.y + 20,
+            y: attrs.y + taskbar_height as i32,
             width: attrs.width as u32,
-            height: attrs.height as u32 - 20,
+            height: attrs.height as u32 - taskbar_height,
         });
+        self.workspaces.taskbar = Some(TaskBar::new(self.context, 20, 1));
         self.workspaces.switch_workspace('1', self.context);
     }
 }

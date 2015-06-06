@@ -5,12 +5,14 @@ use std::collections::HashMap;
 use x11::xlib::{Window};
 use super::container::{ self, Container };
 use super::layout;
+use super::TaskBar;
 use super::super::libx::{ self, Context };
 
 pub struct Workspaces {
     current: char,
     context: Context,
     pub rec: Option<layout::Rectangle>,
+    pub taskbar: Option<TaskBar>,
     pub spaces: HashMap<char, Container>,
 }
 
@@ -20,6 +22,7 @@ impl Workspaces {
             current: '0',
             context: context,
             spaces: HashMap::new(),
+            taskbar: None,
             rec: None,
         }
     }
@@ -83,6 +86,16 @@ impl Workspaces {
             }
             None => {}
         }
+
+        match self.taskbar.as_mut() {
+            Some(bar) => {
+                let keys = self.spaces.keys().map(|c| c.clone()).collect::<Vec<char>>();
+                bar.load(keys);
+                bar.draw_workspaces();
+            }
+            None => {}
+        }
+
     }
 
     pub fn can_manage(context: libx::Context, id: Window) -> bool {
