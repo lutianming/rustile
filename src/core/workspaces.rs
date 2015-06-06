@@ -39,6 +39,16 @@ impl Workspaces {
         }
         space.category = container::Type::Workspace;
         self.spaces.insert(key, space);
+
+        // update taskbar
+        match self.taskbar.as_mut() {
+            Some(bar) => {
+                let keys = self.spaces.keys().map(|c| c.clone()).collect::<Vec<char>>();
+                bar.load(keys);
+                bar.update();
+            }
+            None => {}
+        }
     }
 
     pub fn delete(&mut self, key: char) {
@@ -87,11 +97,11 @@ impl Workspaces {
             None => {}
         }
 
+        // update taskbar
         match self.taskbar.as_mut() {
             Some(bar) => {
-                let keys = self.spaces.keys().map(|c| c.clone()).collect::<Vec<char>>();
-                bar.load(keys);
-                bar.draw_workspaces();
+                bar.set_current(self.current);
+                bar.update();
             }
             None => {}
         }

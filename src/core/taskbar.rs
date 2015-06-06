@@ -8,6 +8,7 @@ pub struct TaskBar {
     context: libx::Context,
     id: xlib::Window,
     height: u32,
+    current: Option<char>,
     workspaces: Vec<char>,
 }
 
@@ -37,6 +38,7 @@ impl TaskBar {
             context: context,
             id: id,
             height: height,
+            current: None,
             workspaces: Vec::new()
         }
     }
@@ -45,23 +47,35 @@ impl TaskBar {
         self.workspaces = keys;
     }
 
-    pub fn draw_workspaces(&mut self) {
+    pub fn set_current(&mut self, current: char) {
+        self.current = Some(current);
+    }
+
+    pub fn update(&mut self) {
         let context = self.context;
         let gc = context.gc;
         let display = context.display;
-        unsafe{
-            xlib::XSetBackground(display, gc,
-                                 context.focus_bg);
-            xlib::XSetForeground(display, gc,
-                                 context.focus_fg);
-
-        }
         for (i, v) in self.workspaces.iter().enumerate() {
             let x = (i as u32 * (self.height + 1)) as i32 + 1;
             let y = 0;
             let width = self.height - 2;
             let height = self.height - 2;
             unsafe{
+                if self.current.is_some() && v.clone() == self.current.unwrap() {
+                    xlib::XSetBackground(display, gc,
+                                         context.focus_bg);
+                    xlib::XSetForeground(display, gc,
+                                         context.focus_fg);
+                }
+                else {
+                    let white = xlib::XWhitePixel(display,
+                                                  context.screen_num);
+                    xlib::XSetBackground(display, gc,
+                                         context.unfocus_bg);
+                    xlib::XSetForeground(display, gc,
+                                         white);
+
+                }
                 xlib::XFillRectangle(display, self.id, gc,
                                      x, y,
                                      width, height);
@@ -75,7 +89,7 @@ impl TaskBar {
             xlib::Expose => {
                 let event: xlib::XExposeEvent = From::from(*e);
                 if event.window == self.id {
-                    self.draw_workspaces();
+                    self.update();
                 }
             }
             _ => {}
