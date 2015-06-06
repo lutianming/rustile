@@ -2,16 +2,15 @@ extern crate x11;
 extern crate libc;
 
 use std::collections::HashMap;
-// use super::Window;
 use x11::xlib::{Window};
 use super::container::{ self, Container };
-use super::super::libx;
-use super::super::libx::{ Context };
-
+use super::layout;
+use super::super::libx::{ self, Context };
 
 pub struct Workspaces {
     current: char,
     context: Context,
+    pub rec: Option<layout::Rectangle>,
     pub spaces: HashMap<char, Container>,
 }
 
@@ -21,6 +20,7 @@ impl Workspaces {
             current: '0',
             context: context,
             spaces: HashMap::new(),
+            rec: None,
         }
     }
 
@@ -30,6 +30,10 @@ impl Workspaces {
 
     pub fn create(&mut self, key: char) {
         let mut space = Container::new(self.context);
+        if self.rec.is_some() {
+            let r = self.rec.unwrap();
+            space.configure(r.x, r.y, r.width, r.height);
+        }
         space.category = container::Type::Workspace;
         self.spaces.insert(key, space);
     }

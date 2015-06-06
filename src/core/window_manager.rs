@@ -449,6 +449,13 @@ impl WindowManager {
     }
 
     fn init_workspaces(&mut self) {
+        let attrs = libx::get_window_attributes(self.context, self.context.root);
+        self.workspaces.rec = Some(layout::Rectangle {
+            x: attrs.x,
+            y: attrs.y + 20,
+            width: attrs.width as u32,
+            height: attrs.height as u32 - 20,
+        });
         self.workspaces.switch_workspace('1', self.context);
     }
 }
