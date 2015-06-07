@@ -62,19 +62,16 @@ fn set_titlebar(client: &Container, rec: Rectangle, focused: bool) {
     let context = client.context;
     let gc = context.gc;
     let display = context.display;
+
+    let (fg, bg) = if focused {
+        (context.focus_fg, context.focus_bg)
+    }
+    else {
+        (context.unfocus_fg, context.unfocus_bg)
+    };
     unsafe {
-        if focused {
-            xlib::XSetBackground(display, gc,
-                                 context.focus_bg);
-            xlib::XSetForeground(display, gc,
-                                 context.focus_fg);
-        }
-        else{
-            xlib::XSetBackground(display, gc,
-                                 context.unfocus_bg);
-            xlib::XSetForeground(display, gc,
-                                 context.unfocus_fg);
-        }
+        xlib::XSetBackground(display, gc, bg);
+        xlib::XSetForeground(display, gc, fg);
 
         let pid = client.pid();
         let r = xlib::XFillRectangle(display,
@@ -89,20 +86,16 @@ fn set_title(client: &Container, rec: Rectangle, focused: bool) {
     let context = client.context;
     let gc = context.gc;
     let display = context.display;
-    unsafe{
-        if focused {
-            xlib::XSetBackground(display, gc,
-                                 context.focus_fg);
-            xlib::XSetForeground(display, gc,
-                                 context.font_color);
-        }
-        else {
-            xlib::XSetBackground(display, gc,
-                                 context.unfocus_fg);
-            xlib::XSetForeground(display, gc,
-                                 context.font_color);
-        }
 
+    let (fg, bg) = if focused {
+        (context.font_color, context.focus_fg)
+    }
+    else {
+        (context.font_color, context.unfocus_fg)
+    };
+    unsafe{
+        xlib::XSetBackground(display, gc, bg);
+        xlib::XSetForeground(display, gc, fg);
         let offset_x = 10;
         let offset_y = 10;
 
@@ -110,14 +103,11 @@ fn set_title(client: &Container, rec: Rectangle, focused: bool) {
 
         match res {
             Some(s) => {
-                let size = s.len() as i32;
-                let title = ffi::CString::new(s).unwrap().as_ptr();
-
+                let x = rec.x+offset_x;
+                let y = rec.y+offset_y;
                 let pid = client.pid();
-                let r = xlib::XmbDrawString(display, pid,
-                                            context.fontset, gc,
-                                            rec.x+offset_x, rec.y+offset_y,
-                                            title, size);
+
+                libx::draw_string(context, s, pid, x, y);
             }
             None =>{}
         }
@@ -129,19 +119,16 @@ fn set_border(client: &Container, focused: bool) {
     let gc = context.gc;
     let display = context.display;
 
+    let (fg, bg) = if focused {
+        (context.focus_fg, context.focus_bg)
+    }
+    else{
+        (context.unfocus_fg, context.unfocus_bg)
+    };
     unsafe {
-        if focused {
-            xlib::XSetBackground(display, gc,
-                                 context.focus_bg);
-            xlib::XSetForeground(display, gc,
-                                 context.focus_fg);
-        }
-        else{
-            xlib::XSetBackground(display, gc,
-                                 context.unfocus_bg);
-            xlib::XSetForeground(display, gc,
-                                 context.unfocus_fg);
-        }
+        xlib::XSetBackground(display, gc, bg);
+        xlib::XSetForeground(display, gc, fg);
+
         xlib::XSetLineAttributes(display, gc, border, 0, 0, 0);
 
         let pid = client.pid();
