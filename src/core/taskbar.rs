@@ -2,7 +2,6 @@ extern crate x11;
 
 use x11::xlib;
 use std::mem;
-use std::slice::Iter;
 use super::super::libx;
 pub struct TaskBar {
     context: libx::Context,
@@ -61,24 +60,30 @@ impl TaskBar {
             let width = self.height - 2;
             let height = self.height - 2;
             unsafe{
-                if self.current.is_some() && v.clone() == self.current.unwrap() {
-                    xlib::XSetBackground(display, gc,
-                                         context.focus_bg);
-                    xlib::XSetForeground(display, gc,
-                                         context.focus_fg);
+                let is_current = self.current.is_some() && v.clone() == self.current.unwrap();
+                let (fg, bg) = if is_current {
+                    (context.focus_fg, context.focus_bg)
                 }
                 else {
                     let white = xlib::XWhitePixel(display,
                                                   context.screen_num);
-                    xlib::XSetBackground(display, gc,
-                                         context.unfocus_bg);
-                    xlib::XSetForeground(display, gc,
-                                         white);
-
-                }
+                    (white, context.unfocus_bg)
+                };
+                xlib::XSetBackground(display, gc,
+                                     bg);
+                xlib::XSetForeground(display, gc,
+                                     fg);
                 xlib::XFillRectangle(display, self.id, gc,
                                      x, y,
                                      width, height);
+
+                let black = xlib::XWhitePixel(display,
+                                              context.screen_num);
+                xlib::XSetBackground(display, gc, fg);
+                xlib::XSetForeground(display, gc, bg);
+
+                let s = v.to_string();
+                libx::draw_string(context, s, self.id, x+5, y+10);
             }
         }
     }

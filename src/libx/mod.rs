@@ -311,6 +311,7 @@ pub fn reparent(context: Context, window: Window, parent: Window, x: c_int, y: c
         xlib::XReparentWindow(context.display, window, parent, x, y);
     }
 }
+
 pub fn query_tree(context: Context, window: Window) -> Option<(Window, Window, Vec<Window>)> {
     let mut root: Window = 0;
     let mut parent: Window = window;
@@ -506,6 +507,16 @@ pub fn display_height(context: Context, screen_num: c_int) -> u32{
 pub fn display_width(context: Context, screen_num: c_int) -> u32{
     unsafe{
         xlib::XDisplayWidth(context.display, screen_num) as u32
+    }
+}
+
+pub fn draw_string(context: Context, string: String, id: Window, x: i32, y: i32) {
+    unsafe{
+        let size = string.len() as i32;
+        let cstring = ffi::CString::new(string).unwrap().as_ptr();
+        xlib::XmbDrawString(context.display, id,
+                            context.fontset, context.gc,
+                            x, y, cstring, size);
     }
 }
 
