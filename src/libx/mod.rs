@@ -29,12 +29,11 @@ pub struct Context {
     pub root: Window,
 
     pub gc: xlib::GC,
+    pub focus_gc: xlib::GC,
+    pub unfocus_gc: xlib::GC,
+    pub focus_font_gc: xlib::GC,
+    pub unfocus_font_gc: xlib::GC,
     pub fontset: xlib::XFontSet,
-    pub focus_bg: c_ulong,
-    pub focus_fg: c_ulong,
-    pub unfocus_bg: c_ulong,
-    pub unfocus_fg: c_ulong,
-    pub font_color: c_ulong,
 }
 
 pub fn open_display(name: Option<&str>) -> Option<Context> {
@@ -510,6 +509,18 @@ pub fn display_width(context: Context, screen_num: c_int) -> u32{
     }
 }
 
+pub fn alloc_color(context: Context, name: &str) -> xlib::XColor {
+    unsafe {
+        let display = context.display;
+        let cmap = xlib::XDefaultColormap(display, context.screen_num);
+        let mut color: xlib::XColor = mem::zeroed();
+        let cname = ffi::CString::new(name).unwrap().as_ptr();
+        let r = xlib::XParseColor(display, cmap, cname, &mut color);
+        xlib::XAllocColor(display, cmap, &mut color);
+        color
+    }
+}
+
 pub fn draw_string(context: Context, string: String, id: Window, x: i32, y: i32) {
     unsafe{
         let size = string.len() as i32;
@@ -520,6 +531,23 @@ pub fn draw_string(context: Context, string: String, id: Window, x: i32, y: i32)
     }
 }
 
+pub fn draw_rectangle(context: Context, id: Window, x: i32, y: i32, width: u32, height: u32) {
+    unsafe{
+        xlib::XDrawRectangle(context.display,
+                             id, context.gc,
+                             x, y,
+                             width, height);
+    }
+}
+
+pub fn fill_rectangle(context: Context, id: Window, x: i32, y: i32, width: u32, height: u32) {
+    unsafe {
+        xlib::XFillRectangle(context.display,
+                             id, context.gc,
+                             x, y,
+                             width, height);
+    }
+}
 #[cfg(test)]
 mod test{
 use super::*;

@@ -35,28 +35,31 @@ fn load_resource(mut context: &mut libx::Context) {
     let root = context.root;
     let display = context.display;
     let mut values: xlib::XGCValues = unsafe{ mem::zeroed() };
-    // let gc = libx::create_gc(self.context, self.id, 0, values);
-    let gc = libx::default_gc(*context, screen);
 
+    let focus_gc = libx::create_gc(*context, context.root, 0, values);
+    let unfocus_gc = libx::create_gc(*context, context.root, 0, values);
+    let focus_font_gc = libx::create_gc(*context, context.root, 0, values);
+    let unfocus_font_gc = libx::create_gc(*context, context.root, 0, values);
     unsafe {
         let black = xlib::XBlackPixel(display, screen);
         let white = xlib::XWhitePixel(display, screen);
 
-        xlib::XSetLineAttributes(display, gc, 5, 0, 0, 0);
+        let blue = libx::alloc_color(*context, "blue");
+        let gray = libx::alloc_color(*context, "gray");
 
-        let cmap = xlib::XDefaultColormap(display, screen);
-        let mut color: xlib::XColor = mem::zeroed();
-        let name = ffi::CString::new("blue").unwrap().as_ptr();
-        let r = xlib::XParseColor(display, cmap, name, &mut color);
-        xlib::XAllocColor(display, cmap, &mut color);
+        xlib::XSetBackground(display, focus_gc, black);
+        xlib::XSetForeground(display, focus_gc, blue.pixel);
 
-        context.gc = gc;
-        context.focus_bg = black;
-        context.focus_fg = color.pixel;
-        context.unfocus_bg = black;
-        context.unfocus_fg = black;
-        context.font_color = white;
+        xlib::XSetBackground(display, unfocus_gc, black);
+        xlib::XSetForeground(display, unfocus_gc, gray.pixel);
 
+        xlib::XSetBackground(display, focus_font_gc, blue.pixel);
+        xlib::XSetForeground(display, focus_font_gc, white);
+
+        xlib::XSetBackground(display, unfocus_font_gc, gray.pixel);
+        xlib::XSetForeground(display, unfocus_font_gc, white);
+
+        // load fontset
         let s = ffi::CString::new("").unwrap().as_ptr();
         let p = setlocale(6, s);
         let res = xlib::XSupportsLocale();
@@ -78,6 +81,11 @@ fn load_resource(mut context: &mut libx::Context) {
         }
         context.fontset = fontset;
     }
+    context.focus_gc = focus_gc;
+    context.unfocus_gc = unfocus_gc;
+    context.focus_font_gc = focus_font_gc;
+    context.unfocus_font_gc = unfocus_font_gc;
+
 }
 
 pub struct WindowManager {

@@ -59,87 +59,68 @@ pub fn decorate(client: &Container, focused: bool) {
 }
 
 fn set_titlebar(client: &Container, rec: Rectangle, focused: bool) {
-    let context = client.context;
-    let gc = context.gc;
-    let display = context.display;
+    let mut context = client.context;
 
-    let (fg, bg) = if focused {
-        (context.focus_fg, context.focus_bg)
+    context.gc = if focused {
+        context.focus_gc
     }
     else {
-        (context.unfocus_fg, context.unfocus_bg)
+        context.unfocus_gc
     };
-    unsafe {
-        xlib::XSetBackground(display, gc, bg);
-        xlib::XSetForeground(display, gc, fg);
 
-        let pid = client.pid();
-        let r = xlib::XFillRectangle(display,
-                                     pid, gc,
-                                     rec.x, rec.y,
-                                     rec.width as u32,
-                                     rec.height as u32);
-    }
+    let pid = client.pid();
+    libx::fill_rectangle(context, pid,
+                         rec.x, rec.y,
+                         rec.width, rec.height);
 }
 
 fn set_title(client: &Container, rec: Rectangle, focused: bool) {
-    let context = client.context;
-    let gc = context.gc;
-    let display = context.display;
+    let mut context = client.context;
 
-    let (fg, bg) = if focused {
-        (context.font_color, context.focus_fg)
+    context.gc = if focused {
+        context.focus_font_gc
     }
     else {
-        (context.font_color, context.unfocus_fg)
+        context.unfocus_font_gc
     };
-    unsafe{
-        xlib::XSetBackground(display, gc, bg);
-        xlib::XSetForeground(display, gc, fg);
-        let offset_x = 10;
-        let offset_y = 10;
 
-        let res = libx::get_text_property(context, client.raw_id(), xlib::XA_WM_NAME);
+    let offset_x = 10;
+    let offset_y = 10;
 
-        match res {
-            Some(s) => {
-                let x = rec.x+offset_x;
-                let y = rec.y+offset_y;
-                let pid = client.pid();
+    let res = libx::get_text_property(context, client.raw_id(), xlib::XA_WM_NAME);
 
-                libx::draw_string(context, s, pid, x, y);
-            }
-            None =>{}
+    match res {
+        Some(s) => {
+            let x = rec.x+offset_x;
+            let y = rec.y+offset_y;
+            let pid = client.pid();
+
+            libx::draw_string(context, s, pid, x, y);
         }
+        None =>{}
     }
 }
 
 fn set_border(client: &Container, focused: bool) {
-    let context = client.context;
-    let gc = context.gc;
-    let display = context.display;
+    let mut context = client.context;
 
-    let (fg, bg) = if focused {
-        (context.focus_fg, context.focus_bg)
+    context.gc = if focused {
+        context.focus_gc
     }
     else{
-        (context.unfocus_fg, context.unfocus_bg)
+        context.unfocus_gc
     };
     unsafe {
-        xlib::XSetBackground(display, gc, bg);
-        xlib::XSetForeground(display, gc, fg);
-
-        xlib::XSetLineAttributes(display, gc, border, 0, 0, 0);
-
-        let pid = client.pid();
-        let rec = client.rec();
-        let r = xlib::XDrawRectangle(display,
-                                     pid, gc,
-                                     rec.x-border as i32,
-                                     rec.y-border as i32,
-                                     rec.width+border*2-1 as u32,
-                                     rec.height+border*2-1 as u32);
+        xlib::XSetLineAttributes(context.display, context.gc, border, 0, 0, 0);
     }
+    let pid = client.pid();
+    let rec = client.rec();
+
+    libx::draw_rectangle(context, pid,
+                         rec.x-border as i32,
+                         rec.y-border as i32,
+                         rec.width+border*2-1 as u32,
+                         rec.height+border*2-1 as u32);
 }
 
 #[derive(PartialEq, Clone)]

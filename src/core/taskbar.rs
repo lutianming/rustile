@@ -51,7 +51,7 @@ impl TaskBar {
     }
 
     pub fn update(&mut self) {
-        let context = self.context;
+        let mut context = self.context;
         let gc = context.gc;
         let display = context.display;
         for (i, v) in self.workspaces.iter().enumerate() {
@@ -61,26 +61,23 @@ impl TaskBar {
             let height = self.height - 2;
             unsafe{
                 let is_current = self.current.is_some() && v.clone() == self.current.unwrap();
-                let (fg, bg) = if is_current {
-                    (context.focus_fg, context.focus_bg)
+                context.gc = if is_current {
+                    context.focus_gc
                 }
                 else {
-                    let white = xlib::XWhitePixel(display,
-                                                  context.screen_num);
-                    (white, context.unfocus_bg)
+                    context.unfocus_gc
                 };
-                xlib::XSetBackground(display, gc,
-                                     bg);
-                xlib::XSetForeground(display, gc,
-                                     fg);
-                xlib::XFillRectangle(display, self.id, gc,
+
+                libx::fill_rectangle(context, self.id,
                                      x, y,
                                      width, height);
 
-                let black = xlib::XWhitePixel(display,
-                                              context.screen_num);
-                xlib::XSetBackground(display, gc, fg);
-                xlib::XSetForeground(display, gc, bg);
+                context.gc = if is_current {
+                    context.focus_font_gc
+                }
+                else{
+                    context.unfocus_font_gc
+                };
 
                 let s = v.to_string();
                 libx::draw_string(context, s, self.id, x+5, y+10);
