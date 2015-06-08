@@ -9,18 +9,20 @@ bind $mod+f fullscreen
 bind $mod+1 workspace 1
 bind $mod+2 workspace 2
 
-bind $mod+3 window 1
-bind $mod+4 window 2
+bind $mod+Shift+1 window 1
+bind $mod+Shift+2 window 2
 
-bind $mod+5 focus left
-bind $mod+6 focus right
+bind $mod+j focus left
+bind $mod+k focus down
+bind $mod+l focus up
+bind $mod+semicolon focus right
 
 bind $mod+Shift+q kill
 bind $mod+v split
 
-bind $mod+j resize shrink width
-bind $mod+k resize grow height
-bind $mod+l resize shrink height
-bind $mod+semicolon resize grow width
+bind $mod+Shift+j resize shrink width
+bind $mod+Shift+k resize grow height
+bind $mod+Shift+l resize shrink height
+bind $mod+Shift+semicolon resize grow width
 
 exec pwd
