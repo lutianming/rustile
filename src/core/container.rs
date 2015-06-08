@@ -181,6 +181,11 @@ impl Container {
             for client in self.clients.iter_mut() {
                 client.portion = client.portion / portion;
             }
+            if self.size() == 0 {
+                unsafe {
+                    xlib::XClearWindow(self.context.display, self.raw_id());
+                }
+            }
             Some(r)
         }
     }
