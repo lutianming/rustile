@@ -224,15 +224,14 @@ impl Handler for LayoutHandler {
         let focused = workspaces.get_focus();
         match focused {
             Some(container) => {
-                if container.get_parent().is_some() {
-                    let p = container.get_parent().unwrap();
-                    p.change_layout(t);
-                    p.update_layout();
+                let c = if container.get_parent().is_some() {
+                    container.get_parent().unwrap()
                 }
                 else {
-                    container.change_layout(t);
-                    container.update_layout();
-                }
+                    container
+                };
+                c.change_layout(t);
+                c.update_layout();
             }
             None => {}
         }
