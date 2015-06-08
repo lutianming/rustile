@@ -26,7 +26,7 @@ impl Config {
         Config {
             mod_key: xlib::Mod4Mask,
             bindsyms: HashMap::new(),
-            titlebar_height: 20,
+            titlebar_height: 16,
         }
     }
 

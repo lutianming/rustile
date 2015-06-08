@@ -481,7 +481,7 @@ impl WindowManager {
 
     fn init_workspaces(&mut self) {
         let attrs = libx::get_window_attributes(self.context, self.context.root);
-        let taskbar_height: u32 = 20;
+        let taskbar_height: u32 = 16;
         self.workspaces.rec = Some(layout::Rectangle {
             x: attrs.x,
             y: attrs.y + taskbar_height as i32,

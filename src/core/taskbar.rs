@@ -56,7 +56,7 @@ impl TaskBar {
         let display = context.display;
         for (i, v) in self.workspaces.iter().enumerate() {
             let x = (i as u32 * (self.height + 1)) as i32 + 1;
-            let y = 0;
+            let y = 1;
             let width = self.height - 2;
             let height = self.height - 2;
             unsafe{
@@ -80,7 +80,12 @@ impl TaskBar {
                 };
 
                 let s = v.to_string();
-                libx::draw_string(context, s, self.id, x+5, y+10);
+
+                let (boundingbox, dummy) = libx::text_extents(context, s.clone());
+                let offset_x = (width as i32- dummy.width as i32)/2 - dummy.x as i32;
+                let offset_y = (height as i32 - dummy.height as i32)/2 - dummy.y as i32;
+                libx::draw_string(context, s, self.id,
+                                  x+offset_x, y+offset_y);
             }
         }
     }

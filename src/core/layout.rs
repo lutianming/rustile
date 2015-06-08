@@ -84,13 +84,16 @@ fn set_title(client: &Container, rec: Rectangle, focused: bool) {
         context.unfocus_font_gc
     };
 
-    let offset_x = 10;
-    let offset_y = 10;
-
     let res = libx::get_text_property(context, client.raw_id(), xlib::XA_WM_NAME);
 
     match res {
         Some(s) => {
+
+            let (boundingbox, dummy) = libx::text_extents(context, s.clone());
+
+            let offset_x = -dummy.x as i32;
+            let offset_y = -dummy.y as i32;
+
             let x = rec.x+offset_x;
             let y = rec.y+offset_y;
             let pid = client.pid();

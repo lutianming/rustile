@@ -6,8 +6,6 @@ use std::ptr;
 use super::layout::{ self, Rectangle };
 use super::super::libx;
 
-pub const TITLE_HEIGHT: libc::c_int = 20;
-
 pub enum Mode {
     Normal,
     Fullscreen,

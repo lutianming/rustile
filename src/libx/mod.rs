@@ -531,6 +531,19 @@ pub fn draw_string(context: Context, string: String, id: Window, x: i32, y: i32)
     }
 }
 
+pub fn text_extents(context: Context, string: String) -> (xlib::XRectangle, xlib::XRectangle){
+    let mut boundingbox: xlib::XRectangle = unsafe {mem::zeroed()};
+    let mut dummy: xlib::XRectangle = unsafe {mem::zeroed()};
+
+    unsafe {
+        let size = string.len() as i32;
+        let cstring = ffi::CString::new(string).unwrap().as_ptr();
+        xlib::XmbTextExtents(context.fontset, cstring, size,
+                             &mut boundingbox, &mut dummy);
+    }
+    (boundingbox, dummy)
+}
+
 pub fn draw_rectangle(context: Context, id: Window, x: i32, y: i32, width: u32, height: u32) {
     unsafe{
         xlib::XDrawRectangle(context.display,
