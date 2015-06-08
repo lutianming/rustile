@@ -150,26 +150,47 @@ impl Handler for WindowCloseHandler {
 impl Handler for WindowFocusHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("change focus in current workspace");
-        // let res = workspaces.get_focus(context);
-
-        // match res {
-        //     Some(container) => {
-        //         println!("window {}", container.id);
-        //         container.unfocus();
-
-        //         let current = workspaces.current();
-        //         match current.contain(container.id) {
-        //             Some(i) => {
-        //                 let next = current.next_client(container.id);
-        //                 next.unwrap().focus();
-        //             }
-        //             None => {}
-        //         }
-        //     }
-        //     None => {}
-        // }
-        let current = workspaces.current();
-        current.switch_client();
+        let focused = workspaces.get_focus();
+        match focused {
+            Some(c) => {
+                match c.get_parent() {
+                    Some(p) => {
+                        let index = p.contain(c.raw_id()).unwrap();
+                        let size = p.size();
+                        match p.direction {
+                            LayoutDirection::Vertical => {
+                                let next = match self.direction {
+                                    MoveDirection::Up => {
+                                        (index-1) % size
+                                    }
+                                    MoveDirection::Down => {
+                                        (index+1) % size
+                                    }
+                                    _ => { return }
+                                };
+                                c.unfocus();
+                                let next_c = p.get_child(next).unwrap().focus();
+                            }
+                            LayoutDirection::Horizontal => {
+                                let next = match self.direction {
+                                    MoveDirection::Left => {
+                                        (index-1) % size
+                                    }
+                                    MoveDirection::Right => {
+                                        (index+1) % size
+                                    }
+                                    _ => { return }
+                                };
+                                c.unfocus();
+                                let next_c = p.get_child(next).unwrap().focus();
+                            }
+                        }
+                    }
+                    None => {}
+                }
+            }
+            None => {}
+        }
     }
 }
 
