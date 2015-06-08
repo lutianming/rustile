@@ -9,7 +9,7 @@ use x11::xlib;
 use super::WindowManager;
 use super::Workspaces;
 use super::container;
-use super::layout::{self, Direction};
+use super::layout::{self, LayoutDirection, MoveDirection};
 use super::super::libx::{self, Context};
 
 #[derive(Hash, Eq, PartialEq, Debug)]
@@ -69,7 +69,7 @@ pub struct WindowToWorkspaceHandler {
 }
 
 pub struct WindowFocusHandler {
-    pub direction: layout::Direction,
+    pub direction: MoveDirection,
 }
 
 pub struct WindowCloseHandler;
@@ -81,7 +81,7 @@ pub enum Resize {
 }
 
 pub struct WindowResizeHandler {
-    pub direction: layout::Direction,
+    pub direction: LayoutDirection,
     pub resize: Resize
 }
 

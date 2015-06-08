@@ -3,7 +3,7 @@ extern crate x11;
 
 use x11::xlib;
 use std::ptr;
-use super::layout::{ self, Rectangle };
+use super::layout::{ self, Rectangle, LayoutDirection };
 use super::super::libx;
 
 pub enum Mode {
@@ -31,7 +31,7 @@ pub struct Container {
     pub context: libx::Context,
 
     pub layout: layout::Type,
-    pub direction: layout::Direction,
+    pub direction: LayoutDirection,
 }
 
 impl PartialEq for Container {
@@ -65,7 +65,7 @@ impl Container {
             portion: 1.0,
 
             layout: layout::Type::Tiling,
-            direction: layout::Direction::Horizontal,
+            direction: LayoutDirection::Horizontal,
         }
     }
 
@@ -83,7 +83,7 @@ impl Container {
             portion: 1.0,
 
             layout: layout::Type::Tiling,
-            direction: layout::Direction::Horizontal,
+            direction: LayoutDirection::Horizontal,
         }
     }
 
@@ -352,18 +352,17 @@ impl Container {
     pub fn change_layout(&mut self, layout_type: layout::Type) {
         if self.layout == layout_type {
             match self.direction {
-                layout::Direction::Horizontal => {
-                    self.direction = layout::Direction::Vertical;
+                LayoutDirection::Horizontal => {
+                    self.direction = LayoutDirection::Vertical;
                 }
-                layout::Direction::Vertical => {
-                    self.direction = layout::Direction::Horizontal;
+                LayoutDirection::Vertical => {
+                    self.direction = LayoutDirection::Horizontal;
                 }
-                _ => {}
             }
         }
         else{
             self.layout = layout_type;
-            self.direction = layout::Direction::Horizontal;
+            self.direction = LayoutDirection::Horizontal;
         }
     }
 
@@ -428,7 +427,6 @@ impl Container {
             }
             None => {}
         }
-
     }
 
     // fullscreen & normal toggle
@@ -486,17 +484,16 @@ impl Container {
         for (i, client) in self.clients.iter().enumerate() {
             let rec = client.rec();
             match self.direction {
-                layout::Direction::Vertical => {
+                LayoutDirection::Vertical => {
                     if (y-rec.y).abs() <= 2 {
                         return Some(i)
                     }
                 }
-                layout::Direction::Horizontal => {
+                LayoutDirection::Horizontal => {
                     if (x-rec.x).abs() <= 2 {
                         return Some(i)
                     }
                 }
-                _ => {}
             }
         }
         None

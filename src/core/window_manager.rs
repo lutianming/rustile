@@ -278,13 +278,12 @@ impl WindowManager {
                         let dy = event.y - y;
                         let rec = c.rec();
                         let step = match c.direction {
-                            layout::Direction::Vertical => {
+                            layout::LayoutDirection::Vertical => {
                                 dy as f32 / rec.height as f32
                             }
-                            layout::Direction::Horizontal => {
+                            layout::LayoutDirection::Horizontal => {
                                 dx as f32 / rec.width as f32
                             }
-                            _ => { 0.05 }
                         };
 
                         c.resize_children(index-1, index, step);

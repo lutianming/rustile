@@ -38,9 +38,13 @@ impl Rectangle {
     }
 }
 #[derive(PartialEq, Clone)]
-pub enum Direction {
+pub enum LayoutDirection {
     Vertical,
     Horizontal,
+}
+
+#[derive(PartialEq, Clone)]
+pub enum MoveDirection {
     Up,
     Down,
     Left,
@@ -164,17 +168,16 @@ fn layout_tiling(container: &mut Container) {
         let id = client.raw_id();
 
         match container.direction {
-            Direction::Vertical => {
+            LayoutDirection::Vertical => {
                 y = y + h as i32;
                 h = (attrs.height as f32 * client.portion) as u32;
                 w = attrs.width;
             }
-            Direction::Horizontal => {
+            LayoutDirection::Horizontal => {
                 x = x + w as i32;
                 w = (attrs.width as f32 * client.portion) as u32;
                 h = attrs.height;
             }
-            _ => {}
         };
 
         client.titlebar = Some(Rectangle {

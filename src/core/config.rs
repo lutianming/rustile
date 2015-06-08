@@ -12,7 +12,7 @@ use std::env;
 use x11::xlib;
 use std::boxed::Box;
 
-use super::layout;
+use super::layout::{self, LayoutDirection, MoveDirection};
 use super::handler::{self, KeyBind};
 
 pub struct Config {
@@ -162,12 +162,12 @@ impl Config {
                 };
                 let direction = match args[1] {
                     "width" => {
-                        layout::Direction::Vertical
+                        LayoutDirection::Vertical
                     }
                     "height" => {
-                        layout::Direction::Horizontal
+                        LayoutDirection::Horizontal
                     }
-                    _ => { layout::Direction::Horizontal }
+                    _ => { LayoutDirection::Horizontal }
                 };
                 let handler = handler::WindowResizeHandler {
                     direction: direction,
@@ -177,11 +177,11 @@ impl Config {
             }
             "focus" => {
                 let direction = match args[0] {
-                    "left" => layout::Direction::Left,
-                    "right" => layout::Direction::Right,
-                    "up" => layout::Direction::Up,
-                    "down" => layout::Direction::Down,
-                    _ => layout::Direction::Right
+                    "left" => MoveDirection::Left,
+                    "right" => MoveDirection::Right,
+                    "up" => MoveDirection::Up,
+                    "down" => MoveDirection::Down,
+                    _ => MoveDirection::Right
                 };
                 let handler = handler::WindowFocusHandler {
                     direction: direction
