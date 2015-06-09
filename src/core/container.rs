@@ -376,18 +376,15 @@ impl Container {
 
         let mut container = Container::new(self.context);
         // add to parent
-        match self.get_parent() {
-            Some(p) => {
-                let attrs = self.rec();
+        if let Some(p) = self.get_parent() {
+            let attrs = self.rec();
 
-                libx::reparent(self.context, container.raw_id(), p.raw_id(),
-                               0, 0);
-                // configure to the same size and position like old one
-                container.configure(attrs.x, attrs.y,
-                                    attrs.width,
-                                    attrs.height);
-            }
-            None => {}
+            libx::reparent(self.context, container.raw_id(), p.raw_id(),
+                           0, 0);
+            // configure to the same size and position like old one
+            container.configure(attrs.x, attrs.y,
+                                attrs.width,
+                                attrs.height);
         }
 
         // swap the property
@@ -423,11 +420,8 @@ impl Container {
     }
 
     pub fn decorate(&self, focused: bool) {
-        match self.get_parent() {
-            Some(p) => {
-                layout::decorate(self, focused);
-            }
-            None => {}
+        if let Some(p) = self.get_parent() {
+            layout::decorate(self, focused);
         }
     }
 
@@ -469,13 +463,10 @@ impl Container {
     // decide which client when click on titlebar
     pub fn query_point(&self, x: i32, y: i32) -> Option<&Container>{
         for client in self.clients.iter() {
-            match client.titlebar {
-                Some(rec) => {
-                    if rec.contain(x, y) {
-                        return Some(client);
-                    }
+            if let Some(rec) = client.titlebar {
+                if rec.contain(x, y) {
+                    return Some(client);
                 }
-                None => {}
             }
         }
         None

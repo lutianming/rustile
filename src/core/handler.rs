@@ -125,13 +125,9 @@ impl Handler for WindowResizeHandler {
 impl Handler for SplitHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         workspaces.current().print_tree(0);
-        match workspaces.get_focus() {
-            Some(c) => {
-                c.split();
-            }
-            None => {}
+        if let Some(c) = workspaces.get_focus() {
+            c.split();
         }
-        println!("after");
         workspaces.current().print_tree(0);
     }
 }
@@ -150,46 +146,39 @@ impl Handler for WindowCloseHandler {
 impl Handler for WindowFocusHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("change focus in current workspace");
-        let focused = workspaces.get_focus();
-        match focused {
-            Some(c) => {
-                match c.get_parent() {
-                    Some(p) => {
-                        let index = p.contain(c.raw_id()).unwrap();
-                        let size = p.size();
-                        let next = match p.direction {
-                            LayoutDirection::Vertical => {
-                                match self.direction {
-                                    MoveDirection::Up => {
-                                        (index-1) % size
-                                    }
-                                    MoveDirection::Down => {
-                                        (index+1) % size
-                                    }
-                                    _ => { index }
-                                }
+        if let Some(c) = workspaces.get_focus() {
+            if let Some(p) = c.get_parent() {
+                let index = p.contain(c.raw_id()).unwrap();
+                let size = p.size();
+                let next = match p.direction {
+                    LayoutDirection::Vertical => {
+                        match self.direction {
+                            MoveDirection::Up => {
+                                (index-1) % size
                             }
-                            LayoutDirection::Horizontal => {
-                                match self.direction {
-                                    MoveDirection::Left => {
-                                        (index-1) % size
-                                    }
-                                    MoveDirection::Right => {
-                                        (index+1) % size
-                                    }
-                                    _ => { index }
-                                }
+                            MoveDirection::Down => {
+                                (index+1) % size
                             }
-                        };
-                        if next != index {
-                            c.unfocus();
-                            let next_c = p.get_child(next).unwrap().focus();
+                            _ => { index }
                         }
                     }
-                    None => {}
+                    LayoutDirection::Horizontal => {
+                        match self.direction {
+                            MoveDirection::Left => {
+                                (index-1) % size
+                            }
+                            MoveDirection::Right => {
+                                (index+1) % size
+                            }
+                            _ => { index }
+                        }
+                    }
+                };
+                if next != index {
+                    c.unfocus();
+                    let next_c = p.get_child(next).unwrap().focus();
                 }
             }
-            None => {}
         }
     }
 }
@@ -211,12 +200,8 @@ impl Handler for WindowToWorkspaceHandler {
 impl Handler for FullscreenHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("fullscreen toggle");
-        let focused = workspaces.get_focus();
-        match focused {
-            Some(c) => {
-                c.mode_toggle();
-            }
-            None => {}
+        if let Some(c) = workspaces.get_focus(){
+            c.mode_toggle();
         }
     }
 }

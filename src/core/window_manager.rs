@@ -157,13 +157,10 @@ impl WindowManager {
 
     pub fn handle_expose(&mut self, event: &xlib::XExposeEvent) {
         let res = self.workspaces.get_container(event.window);
-        match res {
-            Some((_, c)) => {
-                for client in c.clients.iter() {
-                    client.decorate(client.is_focused());
-                }
+        if let Some((_, c)) = res {
+            for client in c.clients.iter() {
+                client.decorate(client.is_focused());
             }
-            None => {}
         }
     }
     pub fn handle_map_request(&mut self, event: &xlib::XMapRequestEvent) {
@@ -194,10 +191,6 @@ impl WindowManager {
     pub fn handle_client_message(&mut self, event: &xlib::XClientMessageEvent) {
         println!("message type {}", event.message_type);
         let s = libx::get_atom_name(self.context, event.message_type);
-        match s {
-            Some(v) => println!("{}", &v),
-            None => {}
-        }
 
         match event.format {
             8 => {
@@ -247,53 +240,44 @@ impl WindowManager {
         self.workspaces.set_focus(id);
 
         // test if press on boarder
-        match self.workspaces.get_container(event.window) {
-            Some((_,c)) => {
-                let res = c.query_border(event.x, event.y);
-                match res {
-                    Some(i) => {
-                        match c.mode {
-                            container::Mode::Normal => {
-                                c.mode = container::Mode::Resize(i, event.x, event.y)
-                            }
-                            container::Mode::Resize(index, x, y) => {
-
-                            }
-                            _ => {}
-                        }
-                    }
-                    None => {}
-                }
-            }
-            None => {}
-        }
-    }
-
-    pub fn handle_button_release(&mut self, event: &xlib::XButtonEvent) {
-        match self.workspaces.get_container(event.window) {
-            Some((_, c)) => {
+        if let Some((_, c)) = self.workspaces.get_container(event.window) {
+            let res = c.query_border(event.x, event.y);
+            if let Some(i) =res {
                 match c.mode {
+                    container::Mode::Normal => {
+                        c.mode = container::Mode::Resize(i, event.x, event.y)
+                    }
                     container::Mode::Resize(index, x, y) => {
-                        let dx = event.x - x;
-                        let dy = event.y - y;
-                        let rec = c.rec();
-                        let step = match c.direction {
-                            layout::LayoutDirection::Vertical => {
-                                dy as f32 / rec.height as f32
-                            }
-                            layout::LayoutDirection::Horizontal => {
-                                dx as f32 / rec.width as f32
-                            }
-                        };
 
-                        c.resize_children(index-1, index, step);
-                        c.update_layout();
-                        c.mode = container::Mode::Normal;
                     }
                     _ => {}
                 }
             }
-            None => {}
+        }
+    }
+
+    pub fn handle_button_release(&mut self, event: &xlib::XButtonEvent) {
+        if let Some((_, c)) = self.workspaces.get_container(event.window) {
+            match c.mode {
+                container::Mode::Resize(index, x, y) => {
+                    let dx = event.x - x;
+                    let dy = event.y - y;
+                    let rec = c.rec();
+                    let step = match c.direction {
+                        layout::LayoutDirection::Vertical => {
+                            dy as f32 / rec.height as f32
+                        }
+                        layout::LayoutDirection::Horizontal => {
+                            dx as f32 / rec.width as f32
+                        }
+                    };
+
+                    c.resize_children(index-1, index, step);
+                    c.update_layout();
+                    c.mode = container::Mode::Normal;
+                }
+                _ => {}
+            }
         }
     }
 
@@ -451,11 +435,8 @@ impl WindowManager {
         loop {
             //handle events here
             let mut e = libx::next_event(self.context);
-            match self.workspaces.taskbar.as_mut() {
-                Some(b) => {
-                    b.handle(&e);
-                }
-                None => {}
+            if let Some(b) = self.workspaces.taskbar.as_mut() {
+                b.handle(&e);
             }
             self.handle(e);
         }

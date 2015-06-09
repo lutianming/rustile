@@ -52,12 +52,9 @@ pub enum MoveDirection {
 }
 
 pub fn decorate(client: &Container, focused: bool) {
-    match client.titlebar {
-        Some(rec) => {
-            set_titlebar(client, rec, focused);
-            set_title(client, rec, focused);
-        }
-        None => {}
+    if let Some(rec) = client.titlebar {
+        set_titlebar(client, rec, focused);
+        set_title(client, rec, focused);
     }
     set_border(client, focused);
 }

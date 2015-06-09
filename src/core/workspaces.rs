@@ -43,13 +43,10 @@ impl Workspaces {
         self.spaces.insert(key, space);
 
         // update taskbar
-        match self.taskbar.as_mut() {
-            Some(bar) => {
-                let keys = self.spaces.keys().map(|c| c.clone()).collect::<Vec<char>>();
-                bar.load(keys);
-                bar.update();
-            }
-            None => {}
+        if let Some(bar) = self.taskbar.as_mut() {
+            let keys = self.spaces.keys().map(|c| c.clone()).collect::<Vec<char>>();
+            bar.load(keys);
+            bar.update();
         }
     }
 
@@ -80,32 +77,23 @@ impl Workspaces {
         }
 
         let old = self.current;
-        match self.get(old) {
-            Some(v) => {
-                v.unmap();
-                v.update_layout();
-            }
-            None => {}
+        if let Some(v) = self.get(old) {
+            v.unmap();
+            v.update_layout();
         }
 
         self.current = new;
-        match self.get(new) {
-            Some(v) => {
-                println!("workspace {}", v.raw_id());
-                v.map();
-                v.focus();
-                v.update_layout();
-            }
-            None => {}
+        if let Some(v) = self.get(new) {
+            println!("workspace {}", v.raw_id());
+            v.map();
+            v.focus();
+            v.update_layout();
         }
 
         // update taskbar
-        match self.taskbar.as_mut() {
-            Some(bar) => {
-                bar.set_current(self.current);
-                bar.update();
-            }
-            None => {}
+        if let Some(bar) = self.taskbar.as_mut() {
+            bar.set_current(self.current);
+            bar.update();
         }
 
     }
@@ -133,13 +121,10 @@ impl Workspaces {
             None => { None }
         };
 
-        match self.get(to) {
-            Some(w) => {
-                if res.is_some(){
-                    w.add(res.unwrap());
-                }
+        if let Some(w) = self.get(to) {
+            if res.is_some(){
+                w.add(res.unwrap());
             }
-            None => {}
         }
     }
 
@@ -166,20 +151,14 @@ impl Workspaces {
 
     // insert window just next to old focus
     pub fn insert_window(&mut self, container: Container) {
-        match self.get_focus() {
-            Some(c) => {
-                match c.get_parent(){
-                    Some(p) => {
-                        let index = p.contain(c.raw_id()).unwrap();
-                        p.insert(index+1, container);
-                        p.update_layout();
-                        p.print_tree(0);
-                        return
-                    }
-                    None => {}
-                }
+        if let Some(c) = self.get_focus() {
+            if let Some(p) = c.get_parent(){
+                let index = p.contain(c.raw_id()).unwrap();
+                p.insert(index+1, container);
+                p.update_layout();
+                p.print_tree(0);
+                return
             }
-            None => {}
         }
         self.add_window(container, None);
     }
@@ -187,32 +166,22 @@ impl Workspaces {
     pub fn remove_window(&mut self, window: Window) -> Option<Container>{
         for (k, workspace) in self.spaces.iter_mut() {
             let res =  workspace.tree_remove(window);
-            match res {
-                Some(w) => {
-                    workspace.update_layout();
-                    workspace.print_tree(0);
-                    return Some(w)
-                }
-                None => {
-                }
+            if let Some(w) = res {
+                workspace.update_layout();
+                workspace.print_tree(0);
+                return Some(w)
             }
         }
         None
     }
 
     pub fn set_focus(&mut self, window: Window) {
-        match self.get_focus() {
-            Some(w) => {
-                w.unfocus();
-            }
-            None => {}
+        if let Some(w) = self.get_focus() {
+            w.unfocus();
         }
 
-        match self.get_container(window) {
-            Some((_, c)) => {
-                c.focus()
-            }
-            None => {}
+        if let Some((_, c)) = self.get_container(window) {
+            c.focus()
         }
     }
 
