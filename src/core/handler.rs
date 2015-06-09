@@ -157,33 +157,33 @@ impl Handler for WindowFocusHandler {
                     Some(p) => {
                         let index = p.contain(c.raw_id()).unwrap();
                         let size = p.size();
-                        match p.direction {
+                        let next = match p.direction {
                             LayoutDirection::Vertical => {
-                                let next = match self.direction {
+                                match self.direction {
                                     MoveDirection::Up => {
                                         (index-1) % size
                                     }
                                     MoveDirection::Down => {
                                         (index+1) % size
                                     }
-                                    _ => { return }
-                                };
-                                c.unfocus();
-                                let next_c = p.get_child(next).unwrap().focus();
+                                    _ => { index }
+                                }
                             }
                             LayoutDirection::Horizontal => {
-                                let next = match self.direction {
+                                match self.direction {
                                     MoveDirection::Left => {
                                         (index-1) % size
                                     }
                                     MoveDirection::Right => {
                                         (index+1) % size
                                     }
-                                    _ => { return }
-                                };
-                                c.unfocus();
-                                let next_c = p.get_child(next).unwrap().focus();
+                                    _ => { index }
+                                }
                             }
+                        };
+                        if next != index {
+                            c.unfocus();
+                            let next_c = p.get_child(next).unwrap().focus();
                         }
                     }
                     None => {}
