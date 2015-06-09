@@ -87,12 +87,11 @@ pub struct WindowResizeHandler {
 
 impl Handler for WindowResizeHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
-        let focused = workspaces.get_focus();
-        if focused.is_some() {
-            let c = focused.unwrap();
-            let parent = c.get_parent();
-            if parent.is_some() {
-                let p = parent.unwrap();
+        let old = workspaces.mode;
+        workspaces.mode = container::Mode::Layout;
+        let mut changed = false;
+        if let Some(c) = workspaces.get_focus() {
+            if let Some(p) = c.get_parent() {
                 let index = p.contain(c.raw_id()).unwrap();
                 if p.direction == self.direction {
                     let step:f32 = match self.resize {
@@ -115,9 +114,12 @@ impl Handler for WindowResizeHandler {
                         p.resize_children(index, index+1, step*2.0);
                     }
                     p.update_layout();
+                    changed = true;
                 }
-
             }
+        }
+        if !changed {
+            workspaces.mode = old;
         }
     }
 }
