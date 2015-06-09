@@ -156,7 +156,7 @@ impl Handler for WindowFocusHandler {
                     LayoutDirection::Vertical => {
                         match self.direction {
                             MoveDirection::Up => {
-                                (index-1) % size
+                                (index+size-1) % size
                             }
                             MoveDirection::Down => {
                                 (index+1) % size
@@ -167,7 +167,7 @@ impl Handler for WindowFocusHandler {
                     LayoutDirection::Horizontal => {
                         match self.direction {
                             MoveDirection::Left => {
-                                (index-1) % size
+                                (index+size-1) % size
                             }
                             MoveDirection::Right => {
                                 (index+1) % size
