@@ -11,6 +11,7 @@ use super::super::libx::{ self, Context };
 pub struct Workspaces {
     current: char,
     context: Context,
+    pub mode: container::Mode,
     pub rec: Option<layout::Rectangle>,
     pub taskbar: Option<TaskBar>,
     pub spaces: HashMap<char, Container>,
@@ -20,6 +21,7 @@ impl Workspaces {
     pub fn new(context: Context) -> Workspaces {
         Workspaces {
             current: '0',
+            mode: container::Mode::Normal,
             context: context,
             spaces: HashMap::new(),
             taskbar: None,

@@ -242,19 +242,22 @@ impl Handler for LayoutHandler {
     fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
         debug!("handle layout");
         let t = self.layout_type.clone();
-        let focused = workspaces.get_focus();
-        match focused {
-            Some(container) => {
-                let c = if container.get_parent().is_some() {
-                    container.get_parent().unwrap()
-                }
-                else {
-                    container
-                };
-                c.change_layout(t);
-                c.update_layout();
+        let old = workspaces.mode;
+        workspaces.mode = container::Mode::Layout;
+        let mut changed = false;
+        if let Some(container) = workspaces.get_focus() {
+            let c = if container.get_parent().is_some() {
+                container.get_parent().unwrap()
             }
-            None => {}
+            else {
+                container
+            };
+            c.change_layout(t);
+            c.update_layout();
+            changed = true;
+        }
+        if !changed {
+            workspaces.mode = old;
         }
     }
 }

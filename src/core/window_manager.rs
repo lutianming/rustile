@@ -346,8 +346,17 @@ impl WindowManager {
     }
 
     pub fn handle_enter(&mut self, event: &xlib::XCrossingEvent){
-        if event.focus == 0 {
-            self.workspaces.set_focus(event.window);
+        debug!("enter window {} {} {}", event.window, event.x_root, event.y_root);
+        match self.workspaces.mode {
+            container::Mode::Normal => {
+                if event.focus == 0 {
+                    self.workspaces.set_focus(event.window);
+                }
+            }
+            container::Mode::Layout => {
+                self.workspaces.mode = container::Mode::Normal;
+            }
+            _ => {}
         }
     }
 

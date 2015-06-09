@@ -6,10 +6,12 @@ use std::ptr;
 use super::layout::{ self, Rectangle, LayoutDirection };
 use super::super::libx;
 
+#[derive(Copy, Clone)]
 pub enum Mode {
     Normal,
     Fullscreen,
     Resize(usize, i32, i32),
+    Layout,
 }
 
 pub enum Type {
