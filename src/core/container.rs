@@ -3,7 +3,7 @@ extern crate x11;
 
 use x11::xlib;
 use std::ptr;
-use super::layout::{ self, Rectangle, LayoutDirection };
+use super::layout::{ self, Rectangle, LayoutDirection, MoveDirection };
 use super::super::libx;
 
 #[derive(Copy, Clone)]
@@ -500,6 +500,39 @@ impl Container {
             width: attrs.width as u32,
             height: attrs.height as u32
         }
+    }
+
+    pub fn circulate(&self, index: usize, direction: MoveDirection) -> Option<usize>{
+        let size = self.size();
+        if index >= size {
+            return None;
+        }
+
+        let next = match self.direction {
+            LayoutDirection::Vertical => {
+                match direction {
+                    MoveDirection::Up => {
+                        (index+size-1) % size
+                    }
+                    MoveDirection::Down => {
+                        (index+1) % size
+                    }
+                    _ => { index }
+                }
+            }
+            LayoutDirection::Horizontal => {
+                match direction {
+                    MoveDirection::Left => {
+                        (index+size-1) % size
+                    }
+                    MoveDirection::Right => {
+                        (index+1) % size
+                    }
+                    _ => { index }
+                }
+            }
+        };
+        Some(next)
     }
 }
 

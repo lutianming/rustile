@@ -292,7 +292,7 @@ impl WindowManager {
 
             match self.config.bindsyms.get_mut(&b) {
                 Some(handler) => {
-                    handler.handle(&mut self.workspaces);
+                    handler(&mut self.workspaces);
                 }
                 None => {
                     println!("no bind");

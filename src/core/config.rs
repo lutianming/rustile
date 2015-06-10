@@ -15,9 +15,16 @@ use std::boxed::Box;
 use super::layout::{self, LayoutDirection, MoveDirection};
 use super::handler::{self, KeyBind};
 
+pub fn build_cmd(tokens: &[&str]) -> Command {
+    let (name, args) = tokens.split_at(1);
+    let mut cmd = Command::new(name[0]);
+    cmd.args(args);
+    cmd
+}
+
 pub struct Config {
     mod_key: u32,
-    pub bindsyms: HashMap<KeyBind, Box<handler::Handler>>,
+    pub bindsyms: HashMap<KeyBind, handler::HandleFn>,
     pub titlebar_height: u32,
 }
 
@@ -75,8 +82,8 @@ impl Config {
                     }
                 }
                 "exec" => {
-                    let mut handler = handler::ExecHandler::new(args);
-                    handler.cmd.spawn();
+                    let mut cmd = build_cmd(&tokens);
+                    cmd.spawn();
                 }
                 "bind" => {
                     self.bind_sym(args);
@@ -98,41 +105,40 @@ impl Config {
         match name[0] {
             "exec" => {
                 println!("exec");
-                let handler = handler::ExecHandler::new(args);
-                self.bindsyms.insert(bind, Box::new(handler));
+                let mut cmd = build_cmd(args);
+                let handler = handler::exec(cmd);
+                self.bindsyms.insert(bind, handler);
             }
             "layout" => {
                 println!("layout");
                 let layout = args[0];
                 match layout {
                     "split" => {
-                        let handler = handler::LayoutHandler::new(layout::Type::Tiling);
-                        self.bindsyms.insert(bind, Box::new(handler));
+                        let handler = handler::layout(layout::Type::Tiling);
+                        self.bindsyms.insert(bind, handler);
                     }
                     "tab" => {
-                        let handler = handler::LayoutHandler::new(layout::Type::Tab);
-                        self.bindsyms.insert(bind, Box::new(handler));
+                        let handler = handler::layout(layout::Type::Tab);
+                        self.bindsyms.insert(bind, handler);
                     }
                     _ => {}
                 }
             }
             "fullscreen" => {
-                let handler = handler::FullscreenHandler;
-                self.bindsyms.insert(bind, Box::new(handler));
+                let handler = handler::fullscreen();
+                self.bindsyms.insert(bind, handler);
             }
             "split" => {
-                let handler = handler::SplitHandler;
-                self.bindsyms.insert(bind, Box::new(handler));
+                let handler = handler::split_container();
+                self.bindsyms.insert(bind, handler);
             }
             "workspace" => {
                 println!("workspace");
                 let c = args[0].chars().nth(0);
                 match c {
                     Some(v) => {
-                        let handler = handler::WorkspaceHandler {
-                            key: v,
-                        };
-                        self.bindsyms.insert(bind, Box::new(handler));
+                        let handler = handler::switch_workspace(v);
+                        self.bindsyms.insert(bind, handler);
                     }
                     None => {}
                 }
@@ -142,10 +148,8 @@ impl Config {
                 match c {
                     Some(v) => {
                         println!("window");
-                        let handler = handler::WindowToWorkspaceHandler {
-                            key: v,
-                        };
-                        self.bindsyms.insert(bind, Box::new(handler));
+                        let handler = handler::move_window_to_workspace(v);
+                        self.bindsyms.insert(bind, handler);
                     }
                     None => {}
                 }
@@ -169,11 +173,8 @@ impl Config {
                     }
                     _ => { LayoutDirection::Horizontal }
                 };
-                let handler = handler::WindowResizeHandler {
-                    direction: direction,
-                    resize: resize
-                };
-                self.bindsyms.insert(bind, Box::new(handler));
+                let handler = handler::resize_window(direction, resize);
+                self.bindsyms.insert(bind, handler);
             }
             "focus" => {
                 let direction = match args[0] {
@@ -183,14 +184,12 @@ impl Config {
                     "down" => MoveDirection::Down,
                     _ => MoveDirection::Right
                 };
-                let handler = handler::WindowFocusHandler {
-                    direction: direction
-                };
-                self.bindsyms.insert(bind, Box::new(handler));
+                let handler = handler::focus_window(direction);
+                self.bindsyms.insert(bind, handler);
             }
             "kill" => {
-                let handler = handler::WindowCloseHandler;
-                self.bindsyms.insert(bind, Box::new(handler));
+                let handler = handler::close_window();
+                self.bindsyms.insert(bind, handler);
             }
             _ => {}
         };
