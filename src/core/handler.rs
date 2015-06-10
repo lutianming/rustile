@@ -46,7 +46,7 @@ impl KeyBind {
 }
 
 pub trait Handler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context);
+    fn handle(&mut self, workspaces: &mut Workspaces);
 }
 
 pub struct ExecHandler {
@@ -86,7 +86,7 @@ pub struct WindowResizeHandler {
 }
 
 impl Handler for WindowResizeHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         let old = workspaces.mode;
         workspaces.mode = container::Mode::Layout;
         let mut changed = false;
@@ -125,7 +125,7 @@ impl Handler for WindowResizeHandler {
 }
 
 impl Handler for SplitHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         workspaces.current().print_tree(0);
         if let Some(c) = workspaces.get_focus() {
             c.split();
@@ -135,18 +135,18 @@ impl Handler for SplitHandler {
 }
 
 impl Handler for WindowCloseHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         debug!("handle window close");
-        let (window, _) = libx::get_input_focus(context);
-        libx::kill_window(context, window);
-        // xlib::XWithdrawWindow(context, window, screen_num);
-        // xlib::XDestroyWindow(context, window);
-        println!("try kill window {}", window);
+        let context = workspaces.context;
+        if let Some(c) = workspaces.get_focus() {
+            libx::kill_window(context, c.raw_id());
+            println!("try kill window {}", c.raw_id());
+        }
 
     }
 }
 impl Handler for WindowFocusHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         debug!("change focus in current workspace");
         if let Some(c) = workspaces.get_focus() {
             if let Some(p) = c.get_parent() {
@@ -186,7 +186,7 @@ impl Handler for WindowFocusHandler {
 }
 
 impl Handler for WindowToWorkspaceHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         let id = match workspaces.get_focus() {
             Some(container) => {
                 container.raw_id()
@@ -200,7 +200,7 @@ impl Handler for WindowToWorkspaceHandler {
 }
 
 impl Handler for FullscreenHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         debug!("fullscreen toggle");
         if let Some(c) = workspaces.get_focus(){
             c.mode_toggle();
@@ -208,25 +208,25 @@ impl Handler for FullscreenHandler {
     }
 }
 impl Handler for WorkspaceHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         debug!("handle workspace form {}", workspaces.current_name());
         if !workspaces.contain(self.key) {
             workspaces.create(self.key);
         }
-        workspaces.switch_workspace(self.key, context);
+        workspaces.switch_workspace(self.key);
         println!("to {}", workspaces.current_name());
     }
 }
 
 impl Handler for ExecHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         debug!("handle exec");
         self.cmd.spawn();
     }
 }
 
 impl Handler for LayoutHandler {
-    fn handle(&mut self, workspaces: &mut Workspaces, context: Context) {
+    fn handle(&mut self, workspaces: &mut Workspaces) {
         debug!("handle layout");
         let t = self.layout_type.clone();
         let old = workspaces.mode;

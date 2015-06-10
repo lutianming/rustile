@@ -10,7 +10,7 @@ use super::super::libx::{ self, Context };
 
 pub struct Workspaces {
     current: char,
-    context: Context,
+    pub context: Context,
     pub mode: container::Mode,
     pub rec: Option<layout::Rectangle>,
     pub taskbar: Option<TaskBar>,
@@ -66,7 +66,7 @@ impl Workspaces {
         self.current
     }
 
-    pub fn switch_workspace(&mut self, new: char, context: Context){
+    pub fn switch_workspace(&mut self, new: char){
         if new == self.current {
             return
         }

@@ -292,7 +292,7 @@ impl WindowManager {
 
             match self.config.bindsyms.get_mut(&b) {
                 Some(handler) => {
-                    handler.handle(&mut self.workspaces, self.context);
+                    handler.handle(&mut self.workspaces);
                 }
                 None => {
                     println!("no bind");
@@ -478,6 +478,6 @@ impl WindowManager {
             height: attrs.height as u32 - taskbar_height,
         });
         self.workspaces.taskbar = Some(TaskBar::new(self.context, 20, 1));
-        self.workspaces.switch_workspace('1', self.context);
+        self.workspaces.switch_workspace('1');
     }
 }
