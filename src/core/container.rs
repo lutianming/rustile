@@ -48,6 +48,15 @@ impl Container {
         let pid = context.root;
         let attrs = libx::get_window_attributes(context, pid);
 
+        // println!("window builder");
+        // let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
+        // println!("target draw");
+        // let mut target = display.draw();
+        // target.clear_color(0.0, 0.0, 1.0, 1.0);
+        // target.finish();
+        // println!("target draw finish");
+        // let id = unsafe { display.get_window().unwrap().platform_window() as xlib::Window };
+        // println!("new window {}", id);
         let id = libx::create_window(context, pid,
                                      attrs.x, attrs.y,
                                      attrs.width as u32,

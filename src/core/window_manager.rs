@@ -388,6 +388,7 @@ impl WindowManager {
             }
             xlib::MotionNotify => {
                 let mut event: xlib::XMotionEvent = From::from(e);
+                debug!("motion {} {} {}", event.window, event.x, event.y);
                 self.handle_button_motion(&event);
             }
             xlib::ButtonRelease => {
@@ -418,8 +419,12 @@ impl WindowManager {
             }
             xlib::EnterNotify => {
                 let mut event: xlib::XCrossingEvent = From::from(e);
-                debug!("enter window {}", event.window);
                 self.handle_enter(&event);
+            }
+            xlib::LeaveNotify => {
+                let mut event: xlib::XCrossingEvent = From::from(e);
+                debug!("leave window {} {} {} {} {}", event.window, event.x, event.y, event.x_root, event.y_root);
+                // self.handle_enter(&event);
             }
             xlib::PropertyNotify => {
                 let mut event: xlib::XPropertyEvent = From::from(e);
